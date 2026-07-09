@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary brand colors for XML-based views (if any) -->
+    <color name="navy_900">#FF0A0E1A</color>
+    <color name="navy_800">#FF111827</color>
+    <color name="sapphire_500">#FF3A7BD5</color>
+    <color name="teal_500">#FF00BCD4</color>
+    <color name="surface_900">#FF0D1117</color>
+    <color name="on_surface">#FFE6EDF3</color>
+    <color name="heat_high">#FFE53935</color>
+    <color name="heat_medium">#FFFFB300</color>
+    <color name="heat_low">#FF43A047</color>
+</resources>
