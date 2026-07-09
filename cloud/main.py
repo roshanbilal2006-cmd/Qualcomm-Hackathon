@@ -1,70 +1,97 @@
-import uvicorn
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List, Dict, Any
-import logging
+from fastapi import FastAPI, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional
 
-app = FastAPI(title="Qualcomm AI Cloud 100 Simulator", version="1.0.0")
+from . import models, schemas
+from .database import engine, get_db
+from .services.retrieval_service import RetrievalService
+from .services.prompt_builder import build_prompt
+from .services.llm_service import LLMService
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("landsense.cloud")
+models.Base.metadata.create_all(bind=engine)
 
-# Global in-memory storage of synced observations
-cloud_observations: List[Dict[str, Any]] = []
+app = FastAPI(title="LandSense AI Cloud", description="Community Intelligence Layer")
 
-class SyncObservation(BaseModel):
-    observation_id: str
-    timestamp: str
-    latitude: float
-    longitude: float
-    construction_stage: str
-    confidence: float
-    progress: float
-    noise_db: float | None = None
-    dust_pm25: float | None = None
-    dust_pm10: float | None = None
-    sensor_status: str
-    development_score: float
-    summary: str
-    embedding: List[float]
+llm_service = LLMService()
 
-@app.post("/observation")
-async def upload_observation(observation: SyncObservation):
-    logger.info(f"Cloud synced: Observation={observation.observation_id}, Score={observation.development_score}")
+def get_retrieval_service(db: Session = Depends(get_db)) -> RetrievalService:
+    return RetrievalService(db)
+
+@app.post("/observation", status_code=200)
+def create_observation(obs: schemas.ObservationCreate, rs: RetrievalService = Depends(get_retrieval_service)):
+    rs.create_or_update_observation(obs.dict())
+    return {"status": "success", "message": "Observation stored successfully"}
+
+@app.get("/heatmap", response_model=List[schemas.HeatmapItem])
+def get_heatmap(rs: RetrievalService = Depends(get_retrieval_service)):
+    observations = rs.get_all_observations()
     
-    # Check if observation already exists, if so update it
-    for i, obs in enumerate(cloud_observations):
-        if obs["observation_id"] == observation.observation_id:
-            cloud_observations[i] = observation.dict()
-            return {"sync_status": "success", "global_id": f"cloud_obs_{observation.observation_id}"}
-            
-    cloud_observations.append(observation.dict())
-    return {"sync_status": "success", "global_id": f"cloud_obs_{observation.observation_id}"}
+    result = []
+    for obs in observations:
+        result.append(schemas.HeatmapItem(
+            latitude=obs.latitude,
+            longitude=obs.longitude,
+            score=obs.development_score,
+            construction_stage=obs.construction_stage,
+            dust=obs.dust_pm25 or 0.0,
+            noise=obs.noise_db or 0.0
+        ))
+    return result
 
-@app.get("/heatmap")
-async def get_heatmap():
-    """
-    Returns summarized dataset for public heatmaps.
-    """
-    heatmap_points = []
-    for obs in cloud_observations:
-        heatmap_points.append({
-            "observation_id": obs["observation_id"],
-            "latitude": obs["latitude"],
-            "longitude": obs["longitude"],
-            "development_score": obs["development_score"],
-            "noise_db": obs["noise_db"],
-            "dust_pm25": obs["dust_pm25"],
-            "stage": obs["construction_stage"]
-        })
-    return heatmap_points
+@app.get("/nearby")
+def get_nearby(lat: float, lng: float, radius_km: float = 5.0, rs: RetrievalService = Depends(get_retrieval_service)):
+    return rs.get_nearby_observations(lat, lng, radius_km)
 
 @app.get("/history")
-async def get_history():
-    """
-    Returns global history feed.
-    """
-    return cloud_observations
+def get_history(
+    lat: Optional[float] = None, 
+    lng: Optional[float] = None, 
+    radius_km: Optional[float] = 5.0,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    rs: RetrievalService = Depends(get_retrieval_service)
+):
+    return rs.get_history(lat, lng, radius_km, start_date, end_date)
+
+@app.get("/latest_sensor")
+def get_latest_sensor(rs: RetrievalService = Depends(get_retrieval_service)):
+    latest = rs.get_latest_sensor()
+    if not latest:
+        raise HTTPException(status_code=404, detail="No sensor data available")
+        
+    return {
+        "timestamp": latest.timestamp,
+        "dust": latest.dust_pm25 or 0.0,
+        "noise": latest.noise_db or 0.0,
+        "latitude": latest.latitude,
+        "longitude": latest.longitude
+    }
+
+@app.get("/stats", response_model=schemas.StatsResponse)
+def get_stats(rs: RetrievalService = Depends(get_retrieval_service)):
+    return schemas.StatsResponse(**rs.get_stats())
+
+@app.post("/chat", response_model=schemas.ChatResponse)
+def chat_assistant(req: schemas.ChatRequest, rs: RetrievalService = Depends(get_retrieval_service)):
+    # 1. Retrieve Context
+    nearby_obs = rs.get_nearby_observations(req.latitude, req.longitude)
+    history_obs = rs.get_history(req.latitude, req.longitude)
+    latest_obs = rs.get_latest_sensor()
+    
+    # Check if we have absolutely nothing
+    if not nearby_obs and not history_obs and not latest_obs:
+        return schemas.ChatResponse(answer="There is currently no community information available.")
+
+    # 2. Build Prompt
+    prompt = build_prompt(req.question, nearby_obs, history_obs, latest_obs)
+    
+    # 3. Call LLM
+    try:
+        answer = llm_service.generate_answer(prompt)
+        return schemas.ChatResponse(answer=answer)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail="Service Unavailable: " + str(e))
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8003, reload=True)
+    import uvicorn
+    uvicorn.run("cloud.main:app", host="0.0.0.0", port=8003, reload=True)
