@@ -29,13 +29,13 @@ class AIAdapter:
         except Exception as e:
             logger.error(f"Failed to connect to AI Service at {self.service_url}: {str(e)}")
         
-        # Fallback to local dummy prediction if service is down
-        logger.warning("Using fallback local mock prediction.")
+        # Do not fabricate construction progress if the Qualcomm VLM service is unavailable.
+        logger.warning("AI service unavailable; returning explicit unknown visual result.")
         return {
-            "stage": "Structural Work",
-            "progress": 55.0,
-            "confidence": 0.88,
-            "description": "Visual analysis fallback: Frame structure construction detected with active workers.",
+            "stage": "Unknown",
+            "progress": 0.0,
+            "confidence": 0.0,
+            "description": "Qualcomm FastVLM service unavailable; visual construction evidence was not verified.",
             "embedding": [0.01] * 128
         }
 

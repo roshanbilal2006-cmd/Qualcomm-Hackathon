@@ -5,9 +5,12 @@ let observationsList = [];
 let heatmapPoints = [];
 let selectedObservationId = null;
 let ownerId = getOwnerId();
+let osmMap = null;
+let heatmapLayer = null;
 
 // Initialize Dashboard
 document.addEventListener("DOMContentLoaded", () => {
+  initializeOpenStreetMap();
   fetchHistory();
   
   // Set up refresh timer
@@ -121,65 +124,89 @@ function renderFeed() {
   }).join("");
 }
 
-// Render Pins on Map Canvas
-function renderHeatmap() {
-  const container = document.getElementById("pins-container");
-  container.innerHTML = "";
-
-  if (heatmapPoints.length === 0) {
-    document.getElementById("coord-info").innerText = "No public heatmap points yet";
+function initializeOpenStreetMap() {
+  if (!window.L) {
+    document.getElementById("coord-info").innerText = "OpenStreetMap library unavailable";
     return;
   }
 
-  const bounds = getCoordinateBounds(heatmapPoints);
-  document.getElementById("coord-info").innerText = `Center: ${bounds.centerLat.toFixed(5)}, ${bounds.centerLng.toFixed(5)}`;
+  osmMap = L.map("osm-map", {
+    zoomControl: true,
+    attributionControl: true
+  }).setView([19.82817, 77.29378], 15);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(osmMap);
+
+  heatmapLayer = L.layerGroup().addTo(osmMap);
+}
+
+// Render heatmap hotspots on OpenStreetMap
+function renderHeatmap() {
+  const emptyState = document.getElementById("map-empty-state");
+
+  if (!osmMap || !heatmapLayer) {
+    document.getElementById("coord-info").innerText = "OpenStreetMap not loaded";
+    return;
+  }
+
+  heatmapLayer.clearLayers();
+
+  if (heatmapPoints.length === 0) {
+    document.getElementById("coord-info").innerText = "No public heatmap points yet";
+    emptyState.classList.remove("hidden");
+    return;
+  }
+
+  emptyState.classList.add("hidden");
+  const bounds = L.latLngBounds(heatmapPoints.map(point => [point.latitude, point.longitude]));
+  const center = bounds.getCenter();
+  document.getElementById("coord-info").innerText = `Center: ${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`;
 
   heatmapPoints.forEach(point => {
-    const pctX = 5 + ((point.longitude - bounds.minLng) / bounds.lngRange) * 90;
-    const pctY = 95 - ((point.latitude - bounds.minLat) / bounds.latRange) * 90;
+    const color = getPinColor(point.development_score);
+    const marker = L.circleMarker([point.latitude, point.longitude], {
+      radius: getHeatRadius(point.development_score),
+      color,
+      fillColor: color,
+      fillOpacity: 0.38,
+      weight: 2,
+      className: `osm-hotspot ${getPinClass(point.development_score)}`
+    }).bindTooltip(`${point.stage || "Observation"} | Score: ${point.development_score}`, {
+      direction: "top",
+      opacity: 0.92
+    });
 
-    const pin = document.createElement("div");
-    pin.className = `map-pin ${getPinClass(point.development_score)}`;
-    pin.style.left = `${pctX}%`;
-    pin.style.top = `${pctY}%`;
-    pin.title = `${point.stage || "Observation"} (Score: ${point.development_score})`;
-    
-    pin.onclick = (e) => {
-      e.stopPropagation();
+    marker.on("click", () => {
       const localObservation = observationsList.find(obs => obs.observation_id === point.observation_id);
       if (localObservation) {
         selectObservation(point.observation_id);
       }
-    };
+    });
 
-    container.appendChild(pin);
+    marker.addTo(heatmapLayer);
   });
-}
 
-function getCoordinateBounds(points) {
-  const lats = points.map(point => point.latitude);
-  const lngs = points.map(point => point.longitude);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latPadding = Math.max((maxLat - minLat) * 0.2, 0.002);
-  const lngPadding = Math.max((maxLng - minLng) * 0.2, 0.002);
-
-  return {
-    minLat: minLat - latPadding,
-    minLng: minLng - lngPadding,
-    latRange: Math.max(maxLat - minLat + latPadding * 2, 0.004),
-    lngRange: Math.max(maxLng - minLng + lngPadding * 2, 0.004),
-    centerLat: (minLat + maxLat) / 2,
-    centerLng: (minLng + maxLng) / 2
-  };
+  osmMap.fitBounds(bounds.pad(0.25), { maxZoom: 16, animate: false });
+  setTimeout(() => osmMap.invalidateSize(), 0);
 }
 
 function getPinClass(score) {
   if (score >= 80) return "completed-site";
   if (score >= 50) return "normal-site";
   return "active-site";
+}
+
+function getPinColor(score) {
+  if (score >= 80) return "#06b6d4";
+  if (score >= 50) return "#f97316";
+  return "#ef4444";
+}
+
+function getHeatRadius(score) {
+  return Math.max(10, Math.min(28, 10 + Number(score || 0) * 0.18));
 }
 
 // Selection handler
@@ -309,8 +336,15 @@ function getOwnerId() {
 async function handlePhotoUpload(event) {
   event.preventDefault();
   const input = document.getElementById("photo-upload-input");
-  const file = input.files && input.files[0];
-  if (!file) return;
+  const files = Array.from(input.files || []);
+  if (files.length === 0) {
+    alert("Upload at least one land-side site photo.");
+    return;
+  }
+  if (files.length > 4) {
+    alert("Upload a maximum of four photos: North, East, South, and West sides.");
+    return;
+  }
 
   const latitude = Number(document.getElementById("upload-latitude").value);
   const longitude = Number(document.getElementById("upload-longitude").value);
@@ -324,7 +358,7 @@ async function handlePhotoUpload(event) {
   btn.innerHTML = `<span class="btn-icon">...</span> Processing...`;
 
   try {
-    const imageDataUrl = await fileToDataUrl(file);
+    const imageDataUrls = await Promise.all(files.map(fileToDataUrl));
     const noiseDb = optionalNumber("upload-noise");
     const dustPm25 = optionalNumber("upload-pm25");
     const dustPm10 = optionalNumber("upload-pm10");
@@ -335,9 +369,10 @@ async function handlePhotoUpload(event) {
     if (dustPm10 !== null) sensorValues.dust_pm10 = dustPm10;
     if (Object.keys(sensorValues).length > 0) sensorValues.sensor_timestamp = new Date().toISOString();
 
-    const voiceQuery = document.getElementById("upload-query").value.trim() || `Analyze uploaded construction photo: ${file.name}`;
+    const sideNames = ["North", "East", "South", "West"].slice(0, files.length).join(", ");
+    const voiceQuery = document.getElementById("upload-query").value.trim() || `Analyze ${files.length} land-side construction photo(s): ${sideNames}.`;
     await submitObservation(createObservationPayload(
-      [imageDataUrl],
+      imageDataUrls,
       voiceQuery,
       latitude,
       longitude,

@@ -12,7 +12,7 @@ class ObservationInput(BaseModel):
     owner_id: Optional[str] = None
     latitude: float
     longitude: float
-    images: List[str] = Field(default_factory=list)
+    images: List[str] = Field(default_factory=list, min_length=1, max_length=4)
     voice_query: Optional[str] = None
     noise_db: Optional[float] = None
     dust_pm25: Optional[float] = None

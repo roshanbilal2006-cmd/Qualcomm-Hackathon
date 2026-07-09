@@ -27,9 +27,13 @@ class CloudAdapter:
                     logger.info("Successfully synchronized observation to Qualcomm AI Cloud 100.")
                     return True
                 else:
-                    logger.error(f"Cloud Service returned status code {response.status_code}: {response.text}")
+                    logger.warning(f"Cloud Service returned status code {response.status_code}: {response.text}")
         except Exception as e:
-            logger.error(f"Failed to synchronize with Qualcomm AI Cloud 100 at {self.service_url}: {str(e)}")
+            logger.warning(
+                "Qualcomm AI Cloud simulator unavailable at %s; observation remains in local SQLite. %s",
+                self.service_url,
+                str(e),
+            )
 
         return False
 
@@ -41,9 +45,24 @@ class CloudAdapter:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(f"{self.service_url}/heatmap")
                 if response.status_code == 200:
-                    return response.json()
-                logger.error(f"Cloud heatmap returned status code {response.status_code}: {response.text}")
+                    return [self._normalize_heatmap_point(item) for item in response.json()]
+                logger.warning(f"Cloud heatmap returned status code {response.status_code}: {response.text}")
         except Exception as e:
-            logger.error(f"Failed to retrieve cloud heatmap from {self.service_url}: {str(e)}")
+            logger.warning(
+                "Cloud heatmap unavailable at %s; using local SQLite heatmap fallback. %s",
+                self.service_url,
+                str(e),
+            )
 
         return []
+
+    def _normalize_heatmap_point(self, item: dict) -> dict:
+        return {
+            "observation_id": item.get("observation_id", ""),
+            "latitude": item.get("latitude"),
+            "longitude": item.get("longitude"),
+            "development_score": item.get("development_score", item.get("score", 0)),
+            "noise_db": item.get("noise_db", item.get("noise", 0.0)),
+            "dust_pm25": item.get("dust_pm25", item.get("dust", 0.0)),
+            "stage": item.get("stage", item.get("construction_stage", "Unknown")),
+        }

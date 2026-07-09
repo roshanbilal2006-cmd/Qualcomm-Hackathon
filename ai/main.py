@@ -38,6 +38,9 @@ async def health():
         "model": engine.model_name,
         "status": "loaded" if engine.loaded else "not_loaded",
         "device": engine.device,
+        "runtime_backend": engine.runtime_backend,
+        "model_artifacts_loaded": bool(engine.model_artifacts),
+        "model_dir": str(engine.model_dir),
         "inference_ready": engine.loaded,
     }
 
