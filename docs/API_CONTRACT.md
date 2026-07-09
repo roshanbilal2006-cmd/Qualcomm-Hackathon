@@ -1,93 +1,256 @@
-# API Contracts Specification
+# API Contracts
 
-This document details all API contracts between LandSense subsystems.
+This document describes the contracts needed by Android, backend, AI, IoT, MCP, and cloud for the `AI-VLM` integration branch.
 
-## 1. Android → Backend
-The Android app posts local site observations to the Backend.
+## Android to Backend
 
-### POST `/observation`
-* **Request Payload**:
-  ```json
-  {
-    "timestamp": "2026-07-08T09:40:00Z",
-    "latitude": 12.9716,
-    "longitude": 77.5946,
-    "images": ["base64_image_data_here..."],
-    "voice_query": "Is this project legal?"
-  }
-  ```
-* **Response Payload**: Universal Data Object (fused Observation JSON).
+Android posts construction-site scans to the backend.
 
----
+Endpoint:
 
-## 2. Backend → AI Service (FastVLM)
-Visual reasoning service running on Snapdragon X Elite NPU.
+```text
+POST /observation
+```
 
-### POST `/predict`
-* **Request Payload**:
-  ```json
-  {
-    "images": ["base64_image_data_here..."]
-  }
-  ```
-* **Response Payload**:
-  ```json
-  {
-    "stage": "Structure",
-    "progress": 65.0,
-    "confidence": 0.92,
-    "description": "Concrete frame structure complete. Brickwork currently in progress.",
-    "embedding": [0.015, -0.024, 0.187]
-  }
-  ```
+Required request fields:
 
----
+- `timestamp`: UTC ISO 8601 string.
+- `latitude`: float.
+- `longitude`: float.
+- `images`: array of Base64 strings or `data:image/jpeg;base64,...` strings.
 
-## 3. Backend → IoT Service (Arduino UNO Q)
-Local environmental telemetry.
+Optional request fields:
 
-### GET `/sensor`
-* **Response Payload**:
-  ```json
-  {
-    "noise_db": 74.2,
-    "pm25": 38.5,
-    "pm10": 79.1,
-    "timestamp": "2026-07-08T09:40:05Z",
-    "device_id": "ARDUINO_UNO_Q_01"
-  }
-  ```
+- `owner_id`: Android device/user/session ID.
+- `voice_query`: optional text query.
+- `noise_db`, `dust_pm25`, `dust_pm10`, `sensor_timestamp`: optional device-supplied sensor data.
 
----
+Example:
 
-## 4. Backend → MCP Service
-RERA permits and tender details.
+```json
+{
+  "timestamp": "2026-07-09T10:30:00Z",
+  "owner_id": "android-demo-device-001",
+  "latitude": 12.9716,
+  "longitude": 77.7500,
+  "images": [
+    "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..."
+  ],
+  "voice_query": "Check whether this construction site is active."
+}
+```
 
-### GET `/nearby_projects`
-* **Query Parameters**: `latitude`, `longitude`, `radius_meters`
-* **Response Payload**:
-  ```json
-  [
+Response:
+
+```json
+{
+  "observation_id": "uuid-string",
+  "timestamp": "2026-07-09T10:30:00Z",
+  "latitude": 12.9716,
+  "longitude": 77.7500,
+  "images": [],
+  "voice_query": "Check whether this construction site is active.",
+  "construction_stage": "Structural Work",
+  "confidence": 0.88,
+  "progress": 55.0,
+  "noise_db": 74.2,
+  "dust_pm25": 38.5,
+  "dust_pm10": 79.1,
+  "sensor_status": "connected",
+  "rera_projects": [
     {
       "name": "Prestige Kings County",
       "builder": "Prestige Group",
       "status": "Approved",
       "distance": 120.5
     }
+  ],
+  "development_score": 80.0,
+  "summary": "Structural Work is estimated at 55% progress. Nearby verified RERA approval (+15 pts).",
+  "embedding": [0.01, 0.02, 0.03]
+}
+```
+
+## Backend Health
+
+```text
+GET /health
+```
+
+Response:
+
+```json
+{
+  "status": "healthy",
+  "device": "Snapdragon X Elite Laptop",
+  "role": "Orchestration Brain"
+}
+```
+
+## History
+
+Current user's local history:
+
+```text
+GET /history?owner_id=<OWNER_ID>
+```
+
+All local history:
+
+```text
+GET /history
+```
+
+Response is an array of Observation responses.
+
+## Observation Lookup
+
+```text
+GET /observation/{observation_id}
+```
+
+Response is one Observation response.
+
+## Heatmap
+
+```text
+GET /heatmap
+```
+
+Response:
+
+```json
+[
+  {
+    "observation_id": "uuid-string",
+    "latitude": 12.9716,
+    "longitude": 77.7500,
+    "development_score": 80.0,
+    "noise_db": 74.2,
+    "dust_pm25": 38.5,
+    "stage": "Structural Work"
+  }
+]
+```
+
+Note: when cloud is available, backend returns cloud heatmap points. If cloud is unavailable, backend falls back to local SQLite observations.
+
+## Nearby RERA/Demo Projects
+
+```text
+GET /nearby?latitude=12.9716&longitude=77.7500&radius=500
+```
+
+Response:
+
+```json
+[
+  {
+    "name": "Prestige Kings County",
+    "builder": "Prestige Group",
+    "status": "Approved",
+    "distance": 120.5
+  }
+]
+```
+
+## Backend to AI Service
+
+Endpoint:
+
+```text
+POST http://localhost:8001/predict
+```
+
+Request:
+
+```json
+{
+  "images": [
+    "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..."
   ]
-  ```
+}
+```
 
----
+Current `AI-VLM` response:
 
-## 5. Backend → Cloud Service (Qualcomm AI Cloud 100)
-Synchronizes the local observation to the global real-time heatmap.
+```json
+{
+  "construction_stage": "Structural Work",
+  "progress_percentage": 55,
+  "confidence": 0.88,
+  "description": "Structural Work is estimated at 55% progress. The image shows active construction cues.",
+  "embedding": [0.01, 0.02, 0.03]
+}
+```
 
-### POST `/observation`
-* **Request Payload**: Processed Observation JSON (strictly NO raw images/audio).
-* **Response Payload**: `{ "sync_status": "success", "global_id": "cloud_obs_..." }`
+The backend adapter normalizes this before fusion.
 
-### GET `/heatmap`
-* **Response Payload**: List of coordinate bounds and construction scores for drawing visual heatmaps.
+AI health:
 
-### GET `/history`
-* **Response Payload**: Global observation log feed.
+```text
+GET http://localhost:8001/health
+```
+
+## Backend to IoT Service
+
+Endpoint:
+
+```text
+GET http://localhost:8002/sensor?lat=12.9716&lon=77.7500
+```
+
+Response:
+
+```json
+{
+  "noise_db": 74.2,
+  "pm25": 38.5,
+  "pm10": 79.1,
+  "timestamp": "2026-07-09T10:30:05Z",
+  "device_id": "ARDUINO_UNO_Q_WHITEFIELD",
+  "latitude": 12.9716,
+  "longitude": 77.7500
+}
+```
+
+## Backend to Cloud Service
+
+Processed observations only:
+
+```text
+POST http://localhost:8003/observation
+```
+
+Cloud endpoints:
+
+```text
+GET http://localhost:8003/history
+GET http://localhost:8003/heatmap
+GET http://localhost:8003/latest_sensor
+POST http://localhost:8003/chat
+```
+
+## Backend to MCP Service
+
+Current simulator endpoint:
+
+```text
+GET http://localhost:8004/nearby_projects?latitude=12.9716&longitude=77.7500&radius_meters=500
+```
+
+Response:
+
+```json
+[
+  {
+    "name": "Prestige Kings County (MCP-verified)",
+    "builder": "Prestige Group",
+    "status": "Approved",
+    "distance": 120.0
+  }
+]
+```
+
+Current caveat: the backend pipeline still uses local SQLite RERA lookup. MCP adapter integration is the next backend task.
+
