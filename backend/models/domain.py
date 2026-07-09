@@ -9,10 +9,15 @@ class ReraProjectSchema(BaseModel):
 
 class ObservationInput(BaseModel):
     timestamp: str
+    owner_id: Optional[str] = None
     latitude: float
     longitude: float
-    images: List[str] = Field(default_factory=list)
+    images: List[str] = Field(default_factory=list, min_length=1, max_length=4)
     voice_query: Optional[str] = None
+    noise_db: Optional[float] = None
+    dust_pm25: Optional[float] = None
+    dust_pm10: Optional[float] = None
+    sensor_timestamp: Optional[str] = None
 
 class ObservationResponse(BaseModel):
     observation_id: str

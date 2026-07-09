@@ -9,15 +9,8 @@ class AIAdapter:
 
     async def predict(self, images: list[str]) -> dict:
         """
-        Sends images to the local AI Service (FastVLM) running on NPU/CPU.
-        Returns:
-            {
-                "stage": str,
-                "progress": float,
-                "confidence": float,
-                "description": str,
-                "embedding": list[float]
-            }
+        Sends images to the local AI service and normalizes the model contract
+        for the existing backend pipeline.
         """
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -26,18 +19,31 @@ class AIAdapter:
                     json={"images": images}
                 )
                 if response.status_code == 200:
-                    return response.json()
+                    result = response.json()
+                    if result.get("status") == "error":
+                        logger.error(f"AI Service rejected image payload: {result.get('message')}")
+                    else:
+                        return self._normalize_prediction(result)
                 else:
                     logger.error(f"AI Service returned status code {response.status_code}: {response.text}")
         except Exception as e:
             logger.error(f"Failed to connect to AI Service at {self.service_url}: {str(e)}")
         
-        # Fallback to local dummy prediction if service is down
-        logger.warning("Using fallback local mock prediction.")
+        # Do not fabricate construction progress if the Qualcomm VLM service is unavailable.
+        logger.warning("AI service unavailable; returning explicit unknown visual result.")
         return {
-            "stage": "Structure",
-            "progress": 55.0,
-            "confidence": 0.88,
-            "description": "Visual analysis fallback: Frame structure construction detected with active workers.",
+            "stage": "Unknown",
+            "progress": 0.0,
+            "confidence": 0.0,
+            "description": "Qualcomm FastVLM service unavailable; visual construction evidence was not verified.",
             "embedding": [0.01] * 128
+        }
+
+    def _normalize_prediction(self, result: dict) -> dict:
+        return {
+            "stage": result.get("construction_stage", result.get("stage", "Unknown")),
+            "progress": float(result.get("progress_percentage", result.get("progress", 0.0))),
+            "confidence": float(result.get("confidence", 0.0)),
+            "description": result.get("description", ""),
+            "embedding": result.get("embedding", []),
         }

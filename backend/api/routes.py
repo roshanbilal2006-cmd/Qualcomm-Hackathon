@@ -7,6 +7,7 @@ from backend.models.domain import ObservationInput, ObservationResponse, ReraPro
 from backend.models.db import DBObservation, DBReraProject
 from backend.pipeline.orchestrator import ObservationPipeline
 from backend.fusion.correlation import haversine_distance
+from backend.adapters.cloud_adapter import CloudAdapter
 
 router = APIRouter()
 
@@ -40,11 +41,14 @@ async def create_observation(
         )
 
 @router.get("/history", response_model=List[ObservationResponse])
-async def get_history(db: Session = Depends(get_db)):
+async def get_history(owner_id: str | None = None, db: Session = Depends(get_db)):
     """
-    Retrieves the history of all local construction observations.
+    Retrieves this user's local construction observation history.
     """
-    db_obs = db.query(DBObservation).order_by(DBObservation.timestamp.desc()).all()
+    query = db.query(DBObservation)
+    if owner_id:
+        query = query.filter(DBObservation.owner_id == owner_id)
+    db_obs = query.order_by(DBObservation.timestamp.desc()).all()
     observations = []
     for o in db_obs:
         observations.append(
@@ -132,8 +136,13 @@ async def get_nearby_projects(
 @router.get("/heatmap")
 async def get_heatmap_points(db: Session = Depends(get_db)):
     """
-    Retrieves coordinate points and key metrics to generate the heatmaps.
+    Retrieves public coordinate points and key metrics to generate heatmaps.
+    Cloud data is public; local DB is used as a fallback while the cloud simulator is unavailable.
     """
+    cloud_points = await CloudAdapter().get_heatmap()
+    if cloud_points:
+        return cloud_points
+
     db_obs = db.query(DBObservation).all()
     points = []
     for o in db_obs:
