@@ -1,0 +1,73 @@
+com.landsense.ai.app-fragment-1.5.1-0 C:\Users\harsh\.gradle\caches\transforms-4\03520a26b75f5f0b3d186a49b381d216\transformed\fragment-1.5.1\res
+com.landsense.ai.app-lifecycle-viewmodel-compose-2.7.0-1 C:\Users\harsh\.gradle\caches\transforms-4\06a8131a93a7f252f3b31417df0dfa60\transformed\lifecycle-viewmodel-compose-2.7.0\res
+com.landsense.ai.app-ui-tooling-release-2 C:\Users\harsh\.gradle\caches\transforms-4\07db47d623266780dcc0c1bda36ac422\transformed\ui-tooling-release\res
+com.landsense.ai.app-material-release-3 C:\Users\harsh\.gradle\caches\transforms-4\0a2e526301c16b9d6ad37452e08d7faf\transformed\material-release\res
+com.landsense.ai.app-startup-runtime-1.1.1-4 C:\Users\harsh\.gradle\caches\transforms-4\0e0769a026a325ec1c58b2135750cc7d\transformed\startup-runtime-1.1.1\res
+com.landsense.ai.app-customview-poolingcontainer-1.0.0-5 C:\Users\harsh\.gradle\caches\transforms-4\100e959215950fa1eaff58c0a2938d85\transformed\customview-poolingcontainer-1.0.0\res
+com.landsense.ai.app-navigation-common-ktx-2.7.7-6 C:\Users\harsh\.gradle\caches\transforms-4\108ebc79bbf583034b5f546a1f1e348c\transformed\navigation-common-ktx-2.7.7\res
+com.landsense.ai.app-hilt-navigation-compose-1.1.0-7 C:\Users\harsh\.gradle\caches\transforms-4\13b88d08a4f81cd401c24f3b8b6617b0\transformed\hilt-navigation-compose-1.1.0\res
+com.landsense.ai.app-ui-text-release-8 C:\Users\harsh\.gradle\caches\transforms-4\1528a365397c4384a40a892263202c0d\transformed\ui-text-release\res
+com.landsense.ai.app-navigation-compose-2.7.7-9 C:\Users\harsh\.gradle\caches\transforms-4\19b40672c51e25b77231d1c1a6c0e3bc\transformed\navigation-compose-2.7.7\res
+com.landsense.ai.app-animation-release-10 C:\Users\harsh\.gradle\caches\transforms-4\1f92214ba4a53a2bd151801c7a1b3996\transformed\animation-release\res
+com.landsense.ai.app-lifecycle-runtime-ktx-2.7.0-11 C:\Users\harsh\.gradle\caches\transforms-4\214a6467b2ac2a44c0c3f279fa59c38d\transformed\lifecycle-runtime-ktx-2.7.0\res
+com.landsense.ai.app-coil-base-2.5.0-12 C:\Users\harsh\.gradle\caches\transforms-4\23d07782b55c9ee0e3743f0eaf6097d1\transformed\coil-base-2.5.0\res
+com.landsense.ai.app-play-services-basement-18.1.0-13 C:\Users\harsh\.gradle\caches\transforms-4\24553adc968eb4f26cbb3c092e9f6d19\transformed\play-services-basement-18.1.0\res
+com.landsense.ai.app-ui-tooling-data-release-14 C:\Users\harsh\.gradle\caches\transforms-4\2680dfe45159439c1a63ce43179ac602\transformed\ui-tooling-data-release\res
+com.landsense.ai.app-ui-unit-release-15 C:\Users\harsh\.gradle\caches\transforms-4\27553b10734296cc26b1fd6452ba3d76\transformed\ui-unit-release\res
+com.landsense.ai.app-runtime-release-16 C:\Users\harsh\.gradle\caches\transforms-4\28ed12a6d143fbce720cc2825c45f77d\transformed\runtime-release\res
+com.landsense.ai.app-navigation-common-2.7.7-17 C:\Users\harsh\.gradle\caches\transforms-4\2b5a950f477cdc5c9a4adb04a5024591\transformed\navigation-common-2.7.7\res
+com.landsense.ai.app-camera-lifecycle-1.3.1-18 C:\Users\harsh\.gradle\caches\transforms-4\2b82e07cb1a3a1baf30e6bd22f86afe1\transformed\camera-lifecycle-1.3.1\res
+com.landsense.ai.app-foundation-layout-release-19 C:\Users\harsh\.gradle\caches\transforms-4\2c3a141b4c1c6b134121a922267b5f96\transformed\foundation-layout-release\res
+com.landsense.ai.app-lifecycle-runtime-compose-2.7.0-20 C:\Users\harsh\.gradle\caches\transforms-4\2dabfbf4ac04b95e87bd7e6d11097825\transformed\lifecycle-runtime-compose-2.7.0\res
+com.landsense.ai.app-savedstate-1.2.1-21 C:\Users\harsh\.gradle\caches\transforms-4\2f5138652238356ce0ddcbdce115091b\transformed\savedstate-1.2.1\res
+com.landsense.ai.app-lifecycle-viewmodel-savedstate-2.7.0-22 C:\Users\harsh\.gradle\caches\transforms-4\3b325aec2bc6c5bb65839ca6ad36e28c\transformed\lifecycle-viewmodel-savedstate-2.7.0\res
+com.landsense.ai.app-camera-video-1.3.1-23 C:\Users\harsh\.gradle\caches\transforms-4\3e8a5758bed70e51189620f5c022c315\transformed\camera-video-1.3.1\res
+com.landsense.ai.app-navigation-runtime-ktx-2.7.7-24 C:\Users\harsh\.gradle\caches\transforms-4\4274e02f1e07e98903c9b5a6dde21366\transformed\navigation-runtime-ktx-2.7.7\res
+com.landsense.ai.app-core-ktx-1.12.0-25 C:\Users\harsh\.gradle\caches\transforms-4\43188f83bcaedfa58b51aba66950f498\transformed\core-ktx-1.12.0\res
+com.landsense.ai.app-emoji2-views-helper-1.3.0-26 C:\Users\harsh\.gradle\caches\transforms-4\43410e7203e33d3c6c9513d238a055ac\transformed\emoji2-views-helper-1.3.0\res
+com.landsense.ai.app-activity-ktx-1.8.2-27 C:\Users\harsh\.gradle\caches\transforms-4\5344183b2fa4b0df8786994c53d6de5d\transformed\activity-ktx-1.8.2\res
+com.landsense.ai.app-runtime-saveable-release-28 C:\Users\harsh\.gradle\caches\transforms-4\58aba87677a087269f59d96d104eee29\transformed\runtime-saveable-release\res
+com.landsense.ai.app-maps-compose-4.3.0-29 C:\Users\harsh\.gradle\caches\transforms-4\5a960d3551840b4f70393c74942f3b50\transformed\maps-compose-4.3.0\res
+com.landsense.ai.app-profileinstaller-1.3.1-30 C:\Users\harsh\.gradle\caches\transforms-4\6502f3197103226cfb569569b414099d\transformed\profileinstaller-1.3.1\res
+com.landsense.ai.app-appcompat-1.6.1-31 C:\Users\harsh\.gradle\caches\transforms-4\65597fc6b1c6651d98c9e25ac07f9765\transformed\appcompat-1.6.1\res
+com.landsense.ai.app-foundation-release-32 C:\Users\harsh\.gradle\caches\transforms-4\6589e95073287c560896c3de3f9f8749\transformed\foundation-release\res
+com.landsense.ai.app-annotation-experimental-1.4.0-33 C:\Users\harsh\.gradle\caches\transforms-4\6a1196c68d8d7a0aeabe232fed156384\transformed\annotation-experimental-1.4.0\res
+com.landsense.ai.app-savedstate-ktx-1.2.1-34 C:\Users\harsh\.gradle\caches\transforms-4\6cc14646f847b8c87ab2a4a1f31b0335\transformed\savedstate-ktx-1.2.1\res
+com.landsense.ai.app-material-ripple-release-35 C:\Users\harsh\.gradle\caches\transforms-4\700d29b77a4611131fe01610a2fd311a\transformed\material-ripple-release\res
+com.landsense.ai.app-camera-view-1.3.1-36 C:\Users\harsh\.gradle\caches\transforms-4\75c01c2b584d5c826da2a1a8111c1714\transformed\camera-view-1.3.1\res
+com.landsense.ai.app-lifecycle-livedata-2.7.0-37 C:\Users\harsh\.gradle\caches\transforms-4\76237776396e4328fc956663deaa3b76\transformed\lifecycle-livedata-2.7.0\res
+com.landsense.ai.app-play-services-maps-18.2.0-38 C:\Users\harsh\.gradle\caches\transforms-4\788ae6a8920d48f48f131be063feb2f8\transformed\play-services-maps-18.2.0\res
+com.landsense.ai.app-animation-core-release-39 C:\Users\harsh\.gradle\caches\transforms-4\7b11d44bf4c93f9b27168654a9b5465c\transformed\animation-core-release\res
+com.landsense.ai.app-hilt-navigation-1.1.0-40 C:\Users\harsh\.gradle\caches\transforms-4\8083804ea6bcbc36cf66abcacec0529b\transformed\hilt-navigation-1.1.0\res
+com.landsense.ai.app-camera-core-1.3.1-41 C:\Users\harsh\.gradle\caches\transforms-4\818a779c38d92bec3506fb46da112821\transformed\camera-core-1.3.1\res
+com.landsense.ai.app-lifecycle-process-2.7.0-42 C:\Users\harsh\.gradle\caches\transforms-4\8c9ade9b8caa66df0edc29fc6d8a9c8a\transformed\lifecycle-process-2.7.0\res
+com.landsense.ai.app-material3-release-43 C:\Users\harsh\.gradle\caches\transforms-4\8e2ec5fe0e74d5234ef7aedced104bee\transformed\material3-release\res
+com.landsense.ai.app-ui-util-release-44 C:\Users\harsh\.gradle\caches\transforms-4\8f05be5c96fe3626ca3f7d400ab860bc\transformed\ui-util-release\res
+com.landsense.ai.app-ui-tooling-preview-release-45 C:\Users\harsh\.gradle\caches\transforms-4\930314def616df6c3b10e197b36b5bb6\transformed\ui-tooling-preview-release\res
+com.landsense.ai.app-lifecycle-runtime-2.7.0-46 C:\Users\harsh\.gradle\caches\transforms-4\9cabe8a66f56ac6304d4f5a4bd42e542\transformed\lifecycle-runtime-2.7.0\res
+com.landsense.ai.app-camera-extensions-1.3.1-47 C:\Users\harsh\.gradle\caches\transforms-4\a8bd85aedf71bc514e653c31277df46b\transformed\camera-extensions-1.3.1\res
+com.landsense.ai.app-material-icons-extended-release-48 C:\Users\harsh\.gradle\caches\transforms-4\b1b4204bb678417144ed7e2a1ca4d5c2\transformed\material-icons-extended-release\res
+com.landsense.ai.app-core-runtime-2.2.0-49 C:\Users\harsh\.gradle\caches\transforms-4\b74af3b90c9b384d22ad8c8d12b651fc\transformed\core-runtime-2.2.0\res
+com.landsense.ai.app-core-1.12.0-50 C:\Users\harsh\.gradle\caches\transforms-4\bdabdde777be3894495948b139a1af68\transformed\core-1.12.0\res
+com.landsense.ai.app-ui-graphics-release-51 C:\Users\harsh\.gradle\caches\transforms-4\c505d6415eea813aeeef022973f98919\transformed\ui-graphics-release\res
+com.landsense.ai.app-lifecycle-viewmodel-2.7.0-52 C:\Users\harsh\.gradle\caches\transforms-4\c80fb038e4f05021ec17c0bc7d915f3e\transformed\lifecycle-viewmodel-2.7.0\res
+com.landsense.ai.app-emoji2-1.3.0-53 C:\Users\harsh\.gradle\caches\transforms-4\ca4f1d61d6dc130565692abb98efe9bb\transformed\emoji2-1.3.0\res
+com.landsense.ai.app-lifecycle-livedata-core-2.7.0-54 C:\Users\harsh\.gradle\caches\transforms-4\cdc220ffbdb36d422fa7bf3e1e30657a\transformed\lifecycle-livedata-core-2.7.0\res
+com.landsense.ai.app-navigation-runtime-2.7.7-55 C:\Users\harsh\.gradle\caches\transforms-4\d2da5bd9026e2bc137b689815690aded\transformed\navigation-runtime-2.7.7\res
+com.landsense.ai.app-ui-geometry-release-56 C:\Users\harsh\.gradle\caches\transforms-4\d3042f35ef58c3b7ba10c58422a81cbf\transformed\ui-geometry-release\res
+com.landsense.ai.app-play-services-base-18.1.0-57 C:\Users\harsh\.gradle\caches\transforms-4\d79aa32feabfde214bc23474eebba4c9\transformed\play-services-base-18.1.0\res
+com.landsense.ai.app-lifecycle-viewmodel-ktx-2.7.0-58 C:\Users\harsh\.gradle\caches\transforms-4\dc2178cb0ee276ba0789ac0949f48fd6\transformed\lifecycle-viewmodel-ktx-2.7.0\res
+com.landsense.ai.app-material-icons-core-release-59 C:\Users\harsh\.gradle\caches\transforms-4\dc7ef4fd9c0b00c68cdc773a2f8814ec\transformed\material-icons-core-release\res
+com.landsense.ai.app-camera-camera2-1.3.1-60 C:\Users\harsh\.gradle\caches\transforms-4\de2fed1fb49020f30bd8bb2b043d61d2\transformed\camera-camera2-1.3.1\res
+com.landsense.ai.app-activity-1.8.2-61 C:\Users\harsh\.gradle\caches\transforms-4\e5ca7a14fb4a79a4bc4a4ce3d7fe7730\transformed\activity-1.8.2\res
+com.landsense.ai.app-ui-test-manifest-1.6.1-62 C:\Users\harsh\.gradle\caches\transforms-4\e67be70dd9944f99ccc3decf3a61c7f1\transformed\ui-test-manifest-1.6.1\res
+com.landsense.ai.app-ui-release-63 C:\Users\harsh\.gradle\caches\transforms-4\ef60fb6f2017251eccafb7f912946a9d\transformed\ui-release\res
+com.landsense.ai.app-activity-compose-1.8.2-64 C:\Users\harsh\.gradle\caches\transforms-4\effd8e2cc1636f578241d0aca1c255d3\transformed\activity-compose-1.8.2\res
+com.landsense.ai.app-appcompat-resources-1.6.1-65 C:\Users\harsh\.gradle\caches\transforms-4\fc6e745beedf391a37bc5c6caa1ad5c0\transformed\appcompat-resources-1.6.1\res
+com.landsense.ai.app-lifecycle-livedata-core-ktx-2.7.0-66 C:\Users\harsh\.gradle\caches\transforms-4\fe1d142509f5fb8e6b63cbf624374641\transformed\lifecycle-livedata-core-ktx-2.7.0\res
+com.landsense.ai.app-resValues-67 C:\Users\harsh\Desktop\Web Dev\Qualcomm-Hackathon\app\build\generated\res\resValues\debug
+com.landsense.ai.app-packageDebugResources-68 C:\Users\harsh\Desktop\Web Dev\Qualcomm-Hackathon\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.landsense.ai.app-packageDebugResources-69 C:\Users\harsh\Desktop\Web Dev\Qualcomm-Hackathon\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.landsense.ai.app-merged_res-70 C:\Users\harsh\Desktop\Web Dev\Qualcomm-Hackathon\app\build\intermediates\merged_res\debug
+com.landsense.ai.app-debug-71 C:\Users\harsh\Desktop\Web Dev\Qualcomm-Hackathon\app\src\debug\res
+com.landsense.ai.app-main-72 C:\Users\harsh\Desktop\Web Dev\Qualcomm-Hackathon\app\src\main\res

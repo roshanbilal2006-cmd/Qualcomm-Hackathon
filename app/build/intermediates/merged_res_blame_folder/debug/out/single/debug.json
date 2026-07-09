@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.landsense.ai.app-merged_res-71:/xml_backup_rules.xml.flat",
+        "source": "com.landsense.ai.app-main-73:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "com.landsense.ai.app-merged_res-71:/xml_data_extraction_rules.xml.flat",
+        "source": "com.landsense.ai.app-main-73:/xml/data_extraction_rules.xml"
+    }
+]

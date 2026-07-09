@@ -9,7 +9,7 @@ Welcome to Android development! Since this is your first time seeing Kotlin and 
 To run and edit this code, you need **Android Studio**, the official Integrated Development Environment (IDE) for Android.
 
 ### Installation & Setup
-1. **Download Android Studio**: Go to [developer.android.com/studio](https://developer.android.com/studio) and download the latest version for Windows.
+1. **Download Android Studio**: Go to [developer.android.com/studio](https://developer.android.com/studio) and download the latest version for Windows.w
 2. **Install**: Run the installer and stick to the default settings (it will install the Android SDK and necessary build tools).
 3. **Open the Project**:
    - Open Android Studio.
