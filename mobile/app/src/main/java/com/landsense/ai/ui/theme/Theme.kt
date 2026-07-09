@@ -16,30 +16,49 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-val QualcommRed = Color(0xFFD90000)
-val QualcommDark = Color(0xFF1E1E1E)
-val LightBackground = Color(0xFFF5F5F5)
+// Qualcomm Brand Colors & Sleek Dark Mode Palette
+val QualcommRed = Color(0xFFE31937)
+val SleekBackground = Color(0xFF0A0A0A)
+val SleekSurface = Color(0xFF141414)
+val SleekSurfaceVariant = Color(0xFF1E1E1E)
+val LightBackground = Color(0xFFF8F9FA)
 
 private val DarkColorScheme = darkColorScheme(
     primary = QualcommRed,
-    secondary = Color.White,
-    tertiary = Color.Gray,
-    background = QualcommDark,
-    surface = Color.Black
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFF33090F), // Very dark red tint for chips
+    onPrimaryContainer = Color(0xFFFFD9DF),
+    secondary = Color(0xFF3253AC), // Qualcomm Blue
+    onSecondary = Color.White,
+    background = SleekBackground,
+    onBackground = Color(0xFFF1F1F1),
+    surface = SleekSurface,
+    onSurface = Color(0xFFF1F1F1),
+    surfaceVariant = SleekSurfaceVariant,
+    onSurfaceVariant = Color(0xFFA0A0A0),
+    surfaceTint = Color.Transparent // Disable M3 red tinting on elevated surfaces
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = QualcommRed,
-    secondary = QualcommDark,
-    tertiary = Color.Gray,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFFFD9DF),
+    onPrimaryContainer = Color(0xFF33090F),
+    secondary = Color(0xFF3253AC),
+    onSecondary = Color.White,
     background = LightBackground,
-    surface = Color.White
+    onBackground = Color(0xFF121212),
+    surface = Color.White,
+    onSurface = Color(0xFF121212),
+    surfaceVariant = Color(0xFFE0E0E0),
+    onSurfaceVariant = Color(0xFF424242),
+    surfaceTint = Color.Transparent
 )
 
 @Composable
 fun LandSenseAITheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Disable dynamic color to keep Qualcomm brand identity
+    darkTheme: Boolean = true, // Force dark theme for that premium startup feel by default
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -50,6 +69,7 @@ fun LandSenseAITheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {

@@ -65,3 +65,8 @@ data class HeatmapPoint(
     @SerialName("dust_pm25") val dustPm25: Double? = null,
     val stage: String? = null
 )
+
+@Serializable
+data class HeatmapResponse(
+    val points: List<HeatmapPoint>
+)
