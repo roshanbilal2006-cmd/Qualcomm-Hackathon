@@ -3,8 +3,32 @@ import json
 from datetime import datetime, timezone
 import random
 import sys
+import base64
+from io import BytesIO
+
+from PIL import Image, ImageDraw
 
 BACKEND_URL = "http://localhost:8000"
+
+def create_mock_construction_image():
+    image = Image.new("RGB", (640, 420), "#9fb7c9")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 300, 640, 420), fill="#b98552")
+
+    for x in range(120, 501, 95):
+        draw.rectangle((x, 120, x + 16, 310), fill="#6f7680")
+    for y in range(145, 256, 55):
+        draw.rectangle((90, y, 540, y + 14), fill="#6f7680")
+
+    draw.line((90, 105, 540, 285), fill="#d6b35a", width=6)
+    draw.line((540, 105, 90, 285), fill="#d6b35a", width=6)
+    draw.rectangle((420, 250, 505, 305), fill="#c84d32")
+    draw.rectangle((445, 225, 479, 250), fill="#f3c24d")
+
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", quality=86)
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
 
 def trigger_simulation(correlated=True):
     print("-------------------------------------------------------------------")
@@ -24,7 +48,7 @@ def trigger_simulation(correlated=True):
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "latitude": lat,
         "longitude": lon,
-        "images": ["dummy_base64_visual_frame_oneplus_15"],
+        "images": [create_mock_construction_image()],
         "voice_query": "Is this project RERA approved? Check noise and particulate emissions."
     }
 

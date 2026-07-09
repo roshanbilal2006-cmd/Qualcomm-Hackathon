@@ -38,8 +38,19 @@ class ObservationPipeline:
         ai_result = await self.ai_adapter.predict(input_data.images)
         logger.info(f"AI Prediction received: Stage={ai_result.get('stage')}, Progress={ai_result.get('progress')}%")
 
-        # Step 4: Request Arduino IoT Sensor telemetry
-        sensor_data = await self.iot_adapter.get_sensor_data()
+        # Step 4: Use device-supplied telemetry when present, otherwise request Arduino IoT telemetry
+        if input_data.noise_db is not None or input_data.dust_pm25 is not None or input_data.dust_pm10 is not None:
+            sensor_data = {
+                "noise_db": input_data.noise_db or 0.0,
+                "pm25": input_data.dust_pm25 or 0.0,
+                "pm10": input_data.dust_pm10 or 0.0,
+                "timestamp": input_data.sensor_timestamp or input_data.timestamp,
+                "device_id": "WEB_UPLOAD_SENSOR",
+                "latitude": input_data.latitude,
+                "longitude": input_data.longitude
+            }
+        else:
+            sensor_data = await self.iot_adapter.get_sensor_data(input_data.latitude, input_data.longitude)
         
         # Step 5: Correlation Engine Checks
         # The sensor node reports its coordinates (either hardcoded or dynamic)
@@ -97,14 +108,18 @@ class ObservationPipeline:
             dust_pm10=pm10,
             rera_projects=rera_projects
         )
+        ai_description = ai_result.get("description", "").strip()
+        fusion_summary = fusion_result.get("summary", "")
+        summary = f"{ai_description} {fusion_summary}".strip() if ai_description else fusion_summary
 
         # Step 8: Build the Universal Data Object
         fused_observation = {
             "observation_id": obs_id,
             "timestamp": input_data.timestamp,
+            "owner_id": input_data.owner_id,
             "latitude": input_data.latitude,
             "longitude": input_data.longitude,
-            "images": input_data.images,
+            "images": [],
             "voice_query": input_data.voice_query,
             "construction_stage": ai_result.get("stage"),
             "confidence": ai_result.get("confidence"),
@@ -115,13 +130,14 @@ class ObservationPipeline:
             "sensor_status": sensor_status,
             "rera_projects": rera_projects,
             "development_score": fusion_result.get("development_score", 0.0),
-            "summary": fusion_result.get("summary", ""),
+            "summary": summary,
             "embedding": ai_result.get("embedding", [])
         }
 
         # Step 9: Save observation to local SQLite DB history
         db_obs = DBObservation(
             observation_id=obs_id,
+            owner_id=fused_observation["owner_id"],
             timestamp=fused_observation["timestamp"],
             latitude=fused_observation["latitude"],
             longitude=fused_observation["longitude"],
@@ -145,6 +161,10 @@ class ObservationPipeline:
         logger.info("Observation details saved to local SQLite DB.")
 
         # Step 10: Sync to Qualcomm AI Cloud (excluding raw files)
-        await self.cloud_adapter.upload_observation(fused_observation)
+        cloud_observation = fused_observation.copy()
+        cloud_observation.pop("owner_id", None)
+        await self.cloud_adapter.upload_observation(cloud_observation)
 
-        return ObservationResponse(**fused_observation)
+        response_payload = fused_observation.copy()
+        response_payload.pop("owner_id", None)
+        return ObservationResponse(**response_payload)

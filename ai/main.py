@@ -1,46 +1,51 @@
-import uvicorn
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
-import random
 import logging
 
-app = FastAPI(title="LandSense FastVLM AI Service Simulator", version="1.0.0")
+import uvicorn
+from fastapi import FastAPI
+from pydantic import BaseModel, Field
+
+try:
+    from ai.engine import ImageDecodeError, VisionInferenceEngine
+except ModuleNotFoundError:
+    from engine import ImageDecodeError, VisionInferenceEngine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("landsense.ai")
 
+app = FastAPI(title="LandSense FastVLM AI Service", version="1.0.0")
+engine = VisionInferenceEngine()
+
+
 class PredictRequest(BaseModel):
-    images: list[str]
+    images: list[str] = Field(default_factory=list)
+
 
 @app.post("/predict")
 async def predict(payload: PredictRequest):
-    logger.info(f"AI Service received {len(payload.images)} images for prediction.")
-    
-    stages = ["Excavation", "Foundation", "Structure", "Finishing", "Completed"]
-    # Provide a realistic prediction
-    stage = random.choice(stages)
-    progress_map = {
-        "Excavation": 15.0,
-        "Foundation": 35.0,
-        "Structure": 65.0,
-        "Finishing": 85.0,
-        "Completed": 100.0
-    }
-    progress = progress_map[stage]
-    confidence = round(random.uniform(0.80, 0.98), 2)
-    
-    description = f"FastVLM visual reasoning: Construction site identified at stage '{stage}' (~{progress}% progress) with {confidence * 100}% confidence. Scaffold structures visible."
-    
-    # Generate mock 128-dim embedding vector
-    embedding = [round(random.gauss(0, 0.1), 4) for _ in range(128)]
-    
+    try:
+        return engine.predict(payload.images)
+    except ImageDecodeError:
+        logger.warning("Invalid image payload received | image_count=%d", len(payload.images))
+        return {
+            "status": "error",
+            "message": "Invalid image",
+        }
+
+
+@app.post("/health")
+async def health():
     return {
-        "stage": stage,
-        "progress": progress,
-        "confidence": confidence,
-        "description": description,
-        "embedding": embedding
+        "model": engine.model_name,
+        "status": "loaded" if engine.loaded else "not_loaded",
+        "device": engine.device,
+        "inference_ready": engine.loaded,
     }
 
+
+@app.get("/health")
+async def health_get():
+    return await health()
+
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

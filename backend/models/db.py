@@ -11,6 +11,7 @@ class DBObservation(DBModelBase):
     __tablename__ = "observations"
 
     observation_id = Column(String, primary_key=True, index=True)
+    owner_id = Column(String, nullable=True, index=True)
     timestamp = Column(String, nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)

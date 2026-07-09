@@ -32,3 +32,18 @@ class CloudAdapter:
             logger.error(f"Failed to synchronize with Qualcomm AI Cloud 100 at {self.service_url}: {str(e)}")
 
         return False
+
+    async def get_heatmap(self) -> list[dict]:
+        """
+        Retrieves the public cloud heatmap dataset.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{self.service_url}/heatmap")
+                if response.status_code == 200:
+                    return response.json()
+                logger.error(f"Cloud heatmap returned status code {response.status_code}: {response.text}")
+        except Exception as e:
+            logger.error(f"Failed to retrieve cloud heatmap from {self.service_url}: {str(e)}")
+
+        return []

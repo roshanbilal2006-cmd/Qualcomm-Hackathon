@@ -87,7 +87,7 @@ body {
   font-size: 24px;
   font-weight: 700;
   line-height: 1.1;
-  letter-spacing: -0.5px;
+  letter-spacing: 0;
 }
 
 .badge-snapdragon {
@@ -104,6 +104,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .status-pill {
@@ -144,6 +146,44 @@ body {
   gap: 6px;
   transition: transform 0.15s, box-shadow 0.15s;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.btn-secondary {
+  background: rgba(6, 182, 212, 0.12);
+  color: var(--text-primary);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.btn-secondary:hover {
+  background: rgba(6, 182, 212, 0.18);
+  border-color: rgba(6, 182, 212, 0.55);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  cursor: wait;
+  opacity: 0.75;
+  transform: none;
+}
+
+.file-input {
+  display: none;
+}
+
+.full-width {
+  width: 100%;
+  justify-content: center;
 }
 
 .btn-primary:hover {
@@ -516,7 +556,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   color: #fff;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
 }
 
 .metadata-grid {
@@ -549,7 +589,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   color: var(--text-secondary);
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
   border-left: 2px solid var(--accent-orange);
   padding-left: 6px;
 }
@@ -688,3 +728,141 @@ body {
 .risk-value.high { color: var(--accent-red); }
 .risk-value.medium { color: var(--accent-orange); }
 .risk-value.low { color: #10b981; }
+
+/* Upload Dialog */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 5, 10, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.upload-dialog {
+  width: min(520px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 4px;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.icon-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: 700 16px var(--font-sans);
+}
+
+.icon-button:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.form-input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font: 500 13px var(--font-sans);
+  padding: 8px 10px;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgba(6, 182, 212, 0.65);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.12);
+}
+
+.gps-row,
+.sensor-form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.gps-row {
+  grid-template-columns: 1fr 1fr;
+}
+
+.sensor-form-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 1180px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-container {
+    min-height: 100vh;
+    height: auto;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    min-height: 360px;
+  }
+
+  .map-panel {
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .system-status {
+    justify-content: flex-start;
+  }
+
+  .gps-row,
+  .sensor-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map-overlay-info {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

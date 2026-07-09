@@ -8,7 +8,7 @@ class IoTAdapter:
     def __init__(self, service_url: str = "http://localhost:8002"):
         self.service_url = service_url
 
-    async def get_sensor_data(self) -> dict:
+    async def get_sensor_data(self, latitude: float | None = None, longitude: float | None = None) -> dict:
         """
         Retrieves environmental telemetry from Arduino UNO Q IoT node.
         Returns:
@@ -22,7 +22,10 @@ class IoTAdapter:
         """
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
-                response = await client.get(f"{self.service_url}/sensor")
+                params = {}
+                if latitude is not None and longitude is not None:
+                    params = {"lat": latitude, "lon": longitude}
+                response = await client.get(f"{self.service_url}/sensor", params=params)
                 if response.status_code == 200:
                     return response.json()
                 else:
