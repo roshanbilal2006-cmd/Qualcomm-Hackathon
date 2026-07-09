@@ -18,7 +18,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://api.landsense.ai/v1/" // Placeholder base URL
+    // 10.0.2.2 is the special alias to your host loopback interface (localhost) on Android Emulators.
+    // If testing on a physical OnePlus 15, you MUST change this to your PC's WiFi IP address (e.g., "http://192.168.1.5:8000/v1/")
+    private const val BASE_URL = "http://10.0.2.2:8000/v1/"
 
     @Provides
     @Singleton
