@@ -10,6 +10,7 @@ import com.landsense.ai.ui.screens.HeatmapScreen
 import com.landsense.ai.ui.screens.HistoryScreen
 import com.landsense.ai.ui.screens.HomeScreen
 import com.landsense.ai.ui.screens.ResultScreen
+import com.landsense.ai.ui.screens.SettingsScreen
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
@@ -17,6 +18,7 @@ sealed class Screen(val route: String) {
     object Result : Screen("result")
     object History : Screen("history")
     object Heatmap : Screen("heatmap")
+    object Settings : Screen("settings")
 }
 
 @Composable
@@ -31,7 +33,8 @@ fun LandSenseNavGraph(
             HomeScreen(
                 onNavigateToCapture = { navController.navigate(Screen.Capture.route) },
                 onNavigateToHistory = { navController.navigate(Screen.History.route) },
-                onNavigateToHeatmap = { navController.navigate(Screen.Heatmap.route) }
+                onNavigateToHeatmap = { navController.navigate(Screen.Heatmap.route) },
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
             )
         }
         composable(Screen.Capture.route) {
@@ -56,6 +59,9 @@ fun LandSenseNavGraph(
         }
         composable(Screen.Heatmap.route) {
             HeatmapScreen(onNavigateUp = { navController.navigateUp() })
+        }
+        composable(Screen.Settings.route) {
+            SettingsScreen(onNavigateBack = { navController.navigateUp() })
         }
     }
 }

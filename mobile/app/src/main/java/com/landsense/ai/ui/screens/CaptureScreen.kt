@@ -86,6 +86,23 @@ fun CaptureScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    
+                    // Upload Mode Toggle (Mode A vs Mode B)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("LiteRT/VLM Edge Processing (Mode B)", style = MaterialTheme.typography.bodyMedium)
+                            Text(if (state.isModeBEnabled) "Enabled" else "Disabled (Mode A)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(
+                            checked = state.isModeBEnabled,
+                            onCheckedChange = { viewModel.toggleModeB(it) }
+                        )
+                    }
+
                     // Camera Preview
                     val context = LocalContext.current
                     val imageCapture = remember { ImageCapture.Builder().build() }
@@ -136,10 +153,16 @@ fun CaptureScreen(
                         enabled = state.images.isNotEmpty() && !state.isUploading
                     ) {
                         if (state.isUploading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                state.vlmProcessingStatus?.let { status ->
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimary)
+                                }
+                            }
                         } else {
                             Icon(Icons.Default.Check, contentDescription = "Submit")
                             Spacer(modifier = Modifier.width(8.dp))

@@ -10,17 +10,18 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.Interceptor
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
+import com.landsense.ai.data.repository.SettingsRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // 10.0.2.2 is the special alias to your host loopback interface (localhost) on Android Emulators.
-    // If testing on a physical OnePlus 15, you MUST change this to your PC's WiFi IP address (e.g., "http://192.168.1.5:8000/v1/")
-    private const val BASE_URL = "http://10.0.2.2:8000/v1/"
+    // We keep a dummy base URL here because Retrofit requires one, but the Interceptor rewrites it
+    private const val DUMMY_BASE_URL = "http://10.0.2.2:8000/"
 
     @Provides
     @Singleton
@@ -33,11 +34,26 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(settingsRepository: SettingsRepository): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
+        val dynamicUrlInterceptor = Interceptor { chain ->
+            var request = chain.request()
+            val hostIp = settingsRepository.getLaptopIp()
+            // Rewrite the URL to point to the laptop's IP dynamically
+            val newUrl = request.url.newBuilder()
+                .scheme("http")
+                .host(hostIp)
+                .port(8000)
+                .build()
+            request = request.newBuilder()
+                .url(newUrl)
+                .build()
+            chain.proceed(request)
+        }
         return OkHttpClient.Builder()
+            .addInterceptor(dynamicUrlInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -49,7 +65,7 @@ object NetworkModule {
     fun provideRetrofit(okHttpClient: OkHttpClient, json: Json): Retrofit {
         val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(DUMMY_BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()

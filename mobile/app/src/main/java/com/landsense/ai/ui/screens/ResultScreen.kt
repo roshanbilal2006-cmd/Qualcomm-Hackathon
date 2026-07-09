@@ -69,18 +69,39 @@ fun ResultScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
-                        ReportCard("Dust Level", "Moderate")
+                        ReportCard("Dust PM2.5", "45 µg/m³")
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        ReportCard("Noise Level", "High")
+                        ReportCard("Noise Level", "82 dB")
                     }
                 }
             }
             item {
-                ReportCard(
-                    title = "Development Score",
-                    value = "78/100"
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        ReportCard("Development Score", "78/100")
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        ReportCard("Sensor Status", "Degraded")
+                    }
+                }
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Nearby RERA Projects", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("1. Prestige Estates (320m)\n2. Sobha Developers (410m)", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
             item {
                 Card(
