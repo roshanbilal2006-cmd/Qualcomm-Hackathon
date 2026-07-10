@@ -22,8 +22,8 @@ class HeatmapItem(BaseModel):
     longitude: float
     score: int
     construction_stage: str
-    dust: float
-    noise: float
+    dust: float | None = None
+    noise: float | None = None
 
 class StatsResponse(BaseModel):
     total_observations: int

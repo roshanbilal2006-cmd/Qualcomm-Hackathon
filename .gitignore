@@ -61,6 +61,11 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
 
 # Flask stuff:
 instance/
@@ -115,6 +120,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
@@ -157,3 +164,12 @@ Thumbs.db
 EHthumbs.db
 Desktop.ini
 .DS_Store
+
+# Project runtime artifacts
+ai_server.ps.log
+backend_server.ps.log
+
+# Local model downloads / Hugging Face caches
+ai/models/fastvlm/*
+!ai/models/fastvlm/README.md
+ai/models/**/.hf_modules_cache/

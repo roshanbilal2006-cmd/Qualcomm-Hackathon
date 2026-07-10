@@ -39,8 +39,9 @@ async def health():
         "status": "loaded" if engine.loaded else "not_loaded",
         "device": engine.device,
         "runtime_backend": engine.runtime_backend,
-        "model_artifacts_loaded": bool(engine.model_artifacts),
+        "model_artifacts_loaded": bool(engine.transformers_model_dir or engine.model_artifacts),
         "model_dir": str(engine.model_dir),
+        "transformers_model_dir": str(engine.transformers_model_dir) if engine.transformers_model_dir else None,
         "inference_ready": engine.loaded,
     }
 

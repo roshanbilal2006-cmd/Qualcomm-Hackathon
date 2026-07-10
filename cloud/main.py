@@ -33,8 +33,8 @@ def get_heatmap(rs: RetrievalService = Depends(get_retrieval_service)):
             longitude=obs.longitude,
             score=obs.development_score,
             construction_stage=obs.construction_stage,
-            dust=obs.dust_pm25 or 0.0,
-            noise=obs.noise_db or 0.0
+            dust=obs.dust_pm25,
+            noise=obs.noise_db
         ))
     return result
 
@@ -61,8 +61,8 @@ def get_latest_sensor(rs: RetrievalService = Depends(get_retrieval_service)):
         
     return {
         "timestamp": latest.timestamp,
-        "dust": latest.dust_pm25 or 0.0,
-        "noise": latest.noise_db or 0.0,
+        "dust": latest.dust_pm25,
+        "noise": latest.noise_db,
         "latitude": latest.latitude,
         "longitude": latest.longitude
     }

@@ -620,6 +620,38 @@ body {
   gap: 12px;
 }
 
+.opencv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.opencv-metric {
+  min-height: 44px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  padding: 8px 10px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.opencv-label {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.opencv-value {
+  color: var(--text-primary);
+  font: 700 14px var(--font-mono);
+}
+
+.feed-empty.compact {
+  grid-column: 1 / -1;
+  padding: 12px;
+}
+
 .sensor-card {
   background-color: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-color);

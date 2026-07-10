@@ -69,7 +69,8 @@ async def get_history(owner_id: str | None = None, db: Session = Depends(get_db)
                 rera_projects=[ReraProjectSchema(**p) for p in o.rera_projects],
                 development_score=o.development_score,
                 summary=o.summary,
-                embedding=o.embedding
+                embedding=o.embedding,
+                opencv_analysis=o.opencv_analysis
             )
         )
     return observations
@@ -103,7 +104,8 @@ async def get_observation_by_id(
         rera_projects=[ReraProjectSchema(**p) for p in o.rera_projects],
         development_score=o.development_score,
         summary=o.summary,
-        embedding=o.embedding
+        embedding=o.embedding,
+        opencv_analysis=o.opencv_analysis
     )
 
 @router.get("/nearby", response_model=List[ReraProjectSchema])

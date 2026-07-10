@@ -46,4 +46,6 @@ class AIAdapter:
             "confidence": float(result.get("confidence", 0.0)),
             "description": result.get("description", ""),
             "embedding": result.get("embedding", []),
+            "site_likelihood": float(result.get("site_likelihood", 0.0)),
+            "opencv_analysis": result.get("opencv_analysis", {}),
         }

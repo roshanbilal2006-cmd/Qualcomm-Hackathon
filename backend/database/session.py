@@ -25,6 +25,9 @@ def init_db():
     if "observations" in inspector.get_table_names() and "owner_id" not in observation_columns:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE observations ADD COLUMN owner_id VARCHAR"))
+    if "observations" in inspector.get_table_names() and "opencv_analysis_json" not in observation_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE observations ADD COLUMN opencv_analysis_json TEXT DEFAULT '{}'"))
 
     db = SessionLocal()
     try:
