@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// ─── Interface ────────────────────────────────────────────────────────────────
 interface ObservationRepository {
     suspend fun submitObservation(request: ObservationRequest): Result<ObservationResponse>
     suspend fun getObservationById(id: String): Result<ObservationResponse>
@@ -18,6 +19,7 @@ interface ObservationRepository {
     suspend fun checkHealth(): Result<HealthResponse>
 }
 
+// ─── Implementation ───────────────────────────────────────────────────────────
 @Singleton
 class ObservationRepositoryImpl @Inject constructor(
     private val apiService: ApiService
@@ -25,52 +27,32 @@ class ObservationRepositoryImpl @Inject constructor(
 
     override suspend fun submitObservation(request: ObservationRequest): Result<ObservationResponse> {
         return withContext(Dispatchers.IO) {
-            try {
-                Result.success(apiService.submitObservation(request))
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+            runCatching { apiService.submitObservation(request) }
         }
     }
 
     override suspend fun getObservationById(id: String): Result<ObservationResponse> {
         return withContext(Dispatchers.IO) {
-            try {
-                Result.success(apiService.getObservationById(id))
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+            runCatching { apiService.getObservationById(id) }
         }
     }
 
     override suspend fun getHistory(ownerId: String?): Result<List<ObservationResponse>> {
         return withContext(Dispatchers.IO) {
-            try {
-                Result.success(apiService.getHistory(ownerId))
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+            runCatching { apiService.getHistory(ownerId) }
         }
     }
 
     override suspend fun getHeatmap(): Result<List<HeatmapPoint>> {
         return withContext(Dispatchers.IO) {
-            try {
-                // Backend's /heatmap first tries cloud (port 8003), then falls back to local SQLite
-                Result.success(apiService.getHeatmap())
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+            // Backend /heatmap tries cloud (port 8003) first, falls back to local SQLite
+            runCatching { apiService.getHeatmap() }
         }
     }
 
     override suspend fun checkHealth(): Result<HealthResponse> {
         return withContext(Dispatchers.IO) {
-            try {
-                Result.success(apiService.getHealth())
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+            runCatching { apiService.getHealth() }
         }
     }
 }

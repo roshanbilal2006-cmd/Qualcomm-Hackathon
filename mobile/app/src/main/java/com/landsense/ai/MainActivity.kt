@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.landsense.ai.ui.navigation.LandSenseNavGraph
+import com.landsense.ai.ui.navigation.AppNavGraph
 import com.landsense.ai.ui.theme.LandSenseAITheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    LandSenseNavGraph()
+                    AppNavGraph()
                 }
             }
         }

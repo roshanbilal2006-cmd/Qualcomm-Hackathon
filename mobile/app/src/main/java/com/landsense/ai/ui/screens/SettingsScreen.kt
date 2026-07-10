@@ -2,7 +2,7 @@ package com.landsense.ai.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -24,7 +24,7 @@ class SettingsViewModel @Inject constructor(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateBack: () -> Unit,
+    onNavigateUp: () -> Unit,                    // matches NavGraph param name
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     var ipText by remember { mutableStateOf(viewModel.getLaptopIp()) }
@@ -34,10 +34,16 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onNavigateUp) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { paddingValues ->
@@ -52,19 +58,26 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Enter your laptop's local Wi-Fi IP address.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             OutlinedTextField(
                 value = ipText,
-                onValueChange = { ipText = it },
-                label = { Text("Laptop Backend IP Address") },
+                onValueChange = { ipText = it.trim() },
+                label = { Text("Laptop IP Address") },
+                placeholder = { Text("e.g. 192.168.1.10") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Example: 192.168.1.100. Do not include http:// or port number here.",
+                text = "Do not include http:// or port number. The app will use port 8000.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -74,11 +87,12 @@ fun SettingsScreen(
             Button(
                 onClick = {
                     viewModel.setLaptopIp(ipText)
-                    onNavigateBack()
+                    onNavigateUp()
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = ipText.isNotBlank()
             ) {
-                Text("Save Settings")
+                Text("Save & Connect")
             }
         }
     }
