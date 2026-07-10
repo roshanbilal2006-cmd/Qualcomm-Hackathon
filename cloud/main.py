@@ -61,6 +61,9 @@ def get_latest_sensor(rs: RetrievalService = Depends(get_retrieval_service)):
         
     return {
         "timestamp": latest.timestamp,
+        "noise_db": latest.noise_db,
+        "dust_pm25": latest.dust_pm25,
+        "dust_pm10": latest.dust_pm10,
         "dust": latest.dust_pm25 or 0.0,
         "noise": latest.noise_db or 0.0,
         "latitude": latest.latitude,

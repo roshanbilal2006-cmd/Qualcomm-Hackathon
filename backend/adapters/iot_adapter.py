@@ -5,8 +5,13 @@ from datetime import datetime, timezone
 logger = logging.getLogger("landsense.iot_adapter")
 
 class IoTAdapter:
-    def __init__(self, service_url: str = "http://localhost:8002"):
+    def __init__(
+        self,
+        service_url: str = "http://localhost:8002",
+        cloud_service_url: str = "http://localhost:8003",
+    ):
         self.service_url = service_url
+        self.cloud_service_url = cloud_service_url
 
     async def get_sensor_data(self, latitude: float | None = None, longitude: float | None = None) -> dict:
         """
@@ -33,12 +38,47 @@ class IoTAdapter:
         except Exception as e:
             logger.error(f"Failed to connect to IoT Service at {self.service_url}: {str(e)}")
 
-        # Fallback dummy environmental data
-        logger.warning("Using fallback local mock sensor data.")
-        return {
-            "noise_db": 62.5,
-            "pm25": 32.1,
-            "pm10": 68.4,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "device_id": "MOCK_UNO_Q_FALLBACK"
-        }
+        cloud_sensor_data = await self._get_latest_cloud_sensor()
+        if cloud_sensor_data:
+            logger.warning("Using latest cloud sensor data because IoT service is unavailable.")
+            return cloud_sensor_data
+
+        logger.warning("No IoT or cloud sensor data available.")
+        return {}
+
+    async def _get_latest_cloud_sensor(self) -> dict:
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                response = await client.get(f"{self.cloud_service_url}/latest_sensor")
+                if response.status_code != 200:
+                    logger.warning(
+                        "Cloud latest sensor returned status code %s: %s",
+                        response.status_code,
+                        response.text,
+                    )
+                    return {}
+
+                data = response.json()
+                noise_db = data.get("noise_db", data.get("noise"))
+                pm25 = data.get("dust_pm25", data.get("dust"))
+                pm10 = data.get("dust_pm10")
+                if noise_db is None or pm25 is None or pm10 is None:
+                    logger.warning("Cloud latest sensor payload is missing one or more sensor fields.")
+                    return {}
+
+                return {
+                    "noise_db": noise_db,
+                    "pm25": pm25,
+                    "pm10": pm10,
+                    "timestamp": data.get("timestamp", datetime.now(timezone.utc).isoformat()),
+                    "device_id": "CLOUD_LATEST_SENSOR",
+                    "latitude": data.get("latitude"),
+                    "longitude": data.get("longitude"),
+                }
+        except Exception as e:
+            logger.warning(
+                "Cloud latest sensor unavailable at %s: %s",
+                self.cloud_service_url,
+                str(e),
+            )
+            return {}
