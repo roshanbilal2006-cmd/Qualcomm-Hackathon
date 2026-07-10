@@ -2,33 +2,41 @@ package com.landsense.ai.ui.screens
 
 import android.Manifest
 import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.landsense.ai.presentation.capture.CaptureViewModel
 import com.landsense.ai.ui.components.CameraPreview
-import java.util.concurrent.Executor
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun CaptureScreen(
     onNavigateUp: () -> Unit,
-    onCaptureComplete: () -> Unit,
+    onCaptureComplete: (String) -> Unit,  // passes observationId to ResultScreen
     viewModel: CaptureViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val imageCapture = remember { ImageCapture.Builder().build() }
 
     val permissionsState = rememberMultiplePermissionsState(
         permissions = listOf(
@@ -40,14 +48,12 @@ fun CaptureScreen(
     )
 
     LaunchedEffect(Unit) {
-        if (!permissionsState.allPermissionsGranted) {
-            permissionsState.launchMultiplePermissionRequest()
-        }
+        if (!permissionsState.allPermissionsGranted) permissionsState.launchMultiplePermissionRequest()
     }
 
-    LaunchedEffect(state.uploadSuccess) {
-        if (state.uploadSuccess) {
-            onCaptureComplete()
+    LaunchedEffect(state.uploadSuccess, state.successObservationId) {
+        if (state.uploadSuccess && state.successObservationId != null) {
+            onCaptureComplete(state.successObservationId!!)
         }
     }
 
@@ -55,124 +61,140 @@ fun CaptureScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Capture Site") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = Modifier.fillMaxSize().padding(padding)
         ) {
             if (!permissionsState.allPermissionsGranted) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("We need Camera and Location permissions to capture data.")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { permissionsState.launchMultiplePermissionRequest() }) {
-                        Text("Grant Permissions")
-                    }
-                }
+                PermissionRequest(onRequest = { permissionsState.launchMultiplePermissionRequest() })
             } else {
-                // Main Capture UI
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
-                    
-                    // Upload Mode Toggle (Mode A vs Mode B)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("LiteRT/VLM Edge Processing (Mode B)", style = MaterialTheme.typography.bodyMedium)
-                            Text(if (state.isModeBEnabled) "Enabled" else "Disabled (Mode A)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(
-                            checked = state.isModeBEnabled,
-                            onCheckedChange = { viewModel.toggleModeB(it) }
-                        )
-                    }
-
                     // Camera Preview
-                    val context = LocalContext.current
-                    val imageCapture = remember { ImageCapture.Builder().build() }
-
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
+                            .weight(1f)
+                            .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
                     ) {
+                        CameraPreview(imageCapture = imageCapture)
+
+                        // Photo count badge
                         Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.medium
+                            modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
+                            color = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                            shape = RoundedCornerShape(8.dp)
                         ) {
-                            CameraPreview(imageCapture = imageCapture)
+                            Text(
+                                text = "${state.images.size}/4 photos",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
-                        
-                        // Capture Button
-                        Button(
-                            onClick = {
-                                // Simulate actual capture success for now (actual file IO requires more setup)
-                                viewModel.addImage("mock_base64_image_data_${System.currentTimeMillis()}")
-                            },
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
-                        ) {
-                            Text("Take Photo (${state.images.size}/4)")
-                        }
-                    }
 
-                    // Optional Voice Query
-                    OutlinedButton(
-                        onClick = {
-                            // In real app, trigger SpeechRecognizer intent
-                            viewModel.setVoiceQuery("Simulated voice query transcript")
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Mic, contentDescription = "Voice Input")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (state.voiceQuery == null) "Add Voice Query (Optional)" else "Voice Query Added")
-                    }
-
-                    // Submit Button
-                    Button(
-                        onClick = { viewModel.submitObservation() },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = state.images.isNotEmpty() && !state.isUploading
-                    ) {
-                        if (state.isUploading) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary
+                        // Shutter button
+                        if (!state.isUploading) {
+                            FloatingActionButton(
+                                onClick = { viewModel.capturePhoto(imageCapture) },
+                                modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp),
+                                containerColor = if (state.images.size >= 4) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            ) {
+                                Icon(
+                                    if (state.isCapturing) Icons.Default.HourglassEmpty else Icons.Default.PhotoCamera,
+                                    contentDescription = "Take Photo",
+                                    modifier = Modifier.size(28.dp)
                                 )
-                                state.vlmProcessingStatus?.let { status ->
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimary)
+                            }
+                        }
+                    }
+
+                    // Bottom panel
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Thumbnail strip
+                        if (state.imageThumbnails.isNotEmpty()) {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                itemsIndexed(state.imageThumbnails) { index, bytes ->
+                                    Box {
+                                        AsyncImage(
+                                            model = bytes,
+                                            contentDescription = "Photo ${index + 1}",
+                                            modifier = Modifier
+                                                .size(64.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        IconButton(
+                                            onClick = { viewModel.removeImage(index) },
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .align(Alignment.TopEnd)
+                                                .background(MaterialTheme.colorScheme.error, CircleShape)
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(12.dp))
+                                        }
+                                    }
                                 }
                             }
-                        } else {
-                            Icon(Icons.Default.Check, contentDescription = "Submit")
+                        }
+
+                        // Voice query button
+                        OutlinedButton(
+                            onClick = { viewModel.setVoiceQuery("Check whether this construction site is active.") },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                if (state.voiceQuery != null) Icons.Default.CheckCircle else Icons.Default.Mic,
+                                contentDescription = null,
+                                tint = if (state.voiceQuery != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Submit Observation")
+                            Text(if (state.voiceQuery == null) "Add Voice Query (Optional)" else "Voice Query Added ✓")
+                        }
+
+                        // Submit button
+                        Button(
+                            onClick = { viewModel.submitObservation() },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            enabled = state.images.isNotEmpty() && !state.isUploading,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (state.isUploading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(state.uploadStatusText ?: "Submitting...")
+                            } else {
+                                Icon(Icons.Default.CloudUpload, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Submit Observation (${state.images.size} photo${if (state.images.size != 1) "s" else ""})")
+                            }
                         }
                     }
                 }
             }
 
-            // Error Snackbar
+            // Error snackbar
             state.errorMessage?.let { error ->
                 Snackbar(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
@@ -181,10 +203,25 @@ fun CaptureScreen(
                             Text("Dismiss", color = MaterialTheme.colorScheme.inversePrimary)
                         }
                     }
-                ) {
-                    Text(error)
-                }
+                ) { Text(error) }
             }
         }
+    }
+}
+
+@Composable
+private fun PermissionRequest(onRequest: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Camera & Location Required", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("LandSense AI needs camera to capture site photos and GPS to tag observations.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(onClick = onRequest, modifier = Modifier.fillMaxWidth()) { Text("Grant Permissions") }
     }
 }

@@ -2,18 +2,16 @@ package com.landsense.ai.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.landsense.ai.presentation.home.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,16 +19,20 @@ fun HomeScreen(
     onNavigateToCapture: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToHeatmap: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val state by viewModel.state.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("LandSense AI", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                ),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 actions = {
+                    IconButton(onClick = { viewModel.checkBackend() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh Status")
+                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
@@ -40,7 +42,7 @@ fun HomeScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onNavigateToCapture,
-                icon = { Icon(Icons.Default.Add, contentDescription = "New Scan") },
+                icon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
                 text = { Text("Start Scan") },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -52,55 +54,71 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
+            // Backend status indicator
+            BackendStatusChip(isOnline = state.isBackendOnline)
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             HomeCard(
                 title = "Community Heatmap",
-                subtitle = "View construction density in your area",
-                icon = Icons.Default.Place,
+                subtitle = "Construction density from cloud layer",
+                icon = Icons.Default.Map,
                 onClick = onNavigateToHeatmap
             )
-            
+
             HomeCard(
                 title = "Previous Scans",
-                subtitle = "Review your history",
-                icon = Icons.Default.DateRange,
+                subtitle = "View your observation history",
+                icon = Icons.Default.History,
                 onClick = onNavigateToHistory
             )
 
-            // Future Chatbot Placeholder
+            // Chatbot placeholder
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                ),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Build, 
+                        Icons.Default.SmartToy,
                         contentDescription = null,
                         modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text(
-                            text = "Construction Assistant",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Text(
-                            text = "Coming Soon",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
+                        Text("Construction Assistant", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                        Text("Powered by Cloud AI — Coming Soon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BackendStatusChip(isOnline: Boolean?) {
+    val (icon, label, color) = when (isOnline) {
+        true -> Triple(Icons.Default.CheckCircle, "Backend Online — Snapdragon X Elite", Color(0xFF4CAF50))
+        false -> Triple(Icons.Default.ErrorOutline, "Backend Offline — Configure IP in Settings", Color(0xFFF44336))
+        null -> Triple(Icons.Default.HourglassEmpty, "Checking backend...", MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(label, style = MaterialTheme.typography.bodySmall, color = color)
         }
     }
 }
@@ -116,26 +134,16 @@ fun HomeCard(
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon, 
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = title, style = MaterialTheme.typography.titleMedium)
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
