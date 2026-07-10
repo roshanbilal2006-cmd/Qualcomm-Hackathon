@@ -57,7 +57,7 @@ def main():
         # 3. Start Cloud Sync service (Port 8003)
         print("Starting Qualcomm Cloud Service on port 8003...")
         p_cloud = subprocess.Popen(
-            [sys.executable, "cloud/main.py"],
+            [sys.executable, "-m", "cloud.main"],
             cwd=project_root,
             env=env
         )

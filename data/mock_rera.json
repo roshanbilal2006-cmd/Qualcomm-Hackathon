@@ -1,0 +1,44 @@
+[
+  {
+    "id": "RERA-KA-00123",
+    "name": "Prestige Tech Park",
+    "builder": "Prestige Group",
+    "status": "Approved",
+    "distance": 0.9
+  },
+  {
+    "id": "RERA-KA-00124",
+    "name": "Brigade Metropolis",
+    "builder": "Brigade Group",
+    "status": "Approved",
+    "distance": 1.4
+  },
+  {
+    "id": "RERA-KA-00125",
+    "name": "Sobha Dream Acres",
+    "builder": "Sobha Limited",
+    "status": "Under Review",
+    "distance": 2.1
+  },
+  {
+    "id": "RERA-KA-00126",
+    "name": "Godrej Woodsman Estate",
+    "builder": "Godrej Properties",
+    "status": "Pending",
+    "distance": 3.0
+  },
+  {
+    "id": "RERA-KA-00127",
+    "name": "Purva Atmosphere",
+    "builder": "Puravankara Limited",
+    "status": "Approved",
+    "distance": 3.8
+  },
+  {
+    "id": "RERA-KA-00128",
+    "name": "Salarpuria Sattva Divinity",
+    "builder": "Salarpuria Sattva Group",
+    "status": "Rejected",
+    "distance": 4.6
+  }
+]

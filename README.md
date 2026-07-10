@@ -41,6 +41,8 @@ Android should not run heavy AI inference for this version. The phone only captu
 - Heatmap and history APIs.
 - Correlation logic for matching camera scans with sensor readings.
 - Development score logic with explainable summary output.
+- Imported IoT + MCP REST data layer at the repository root, with mock RERA data,
+  demo sensor readings, and a serial Arduino adapter for live hackathon hardware.
 
 ## What Is Still Missing
 
@@ -162,6 +164,33 @@ Run backend/cloud integration test:
 ```bash
 python scripts/test_backend_cloud_integration.py
 ```
+
+## Imported IoT + MCP REST Service
+
+The `mcp+IoT` branch is integrated as a root-level FastAPI service. It exposes a
+stable sensor/RERA contract through `main.py`, `routes/`, `services/`,
+`adapters/`, `interfaces/`, `models/`, `config/`, and `data/mock_rera.json`.
+
+Run it directly when you want to test that service by itself:
+
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8010
+```
+
+Useful endpoints:
+
+```text
+GET /status
+GET /sensor
+GET /rera
+GET /nearby_projects
+GET /project/{id}
+```
+
+By default it uses demo/mock mode from `.env.example`: `SENSOR_MODE=demo` and
+`RERA_MODE=mock`. Mock RERA data is stored in `data/mock_rera.json`. To use a
+real Arduino, set `SENSOR_MODE=live` and configure `ARDUINO_PORT` for the
+machine, for example `COM3` on Windows.
 
 ## Android Input Contract
 

@@ -9,14 +9,15 @@ class LLMService:
         self.api_key = os.getenv("OPENROUTER_API_KEY")
         self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
         self.model = os.getenv("OPENROUTER_MODEL", "google/gemma-3-4b-it:free")
-        
-        self.client = OpenAI(
-            base_url=self.base_url,
-            api_key=self.api_key
-        )
+        self.client = None
+        if self.api_key:
+            self.client = OpenAI(
+                base_url=self.base_url,
+                api_key=self.api_key
+            )
 
     def generate_answer(self, prompt: str) -> str:
-        if not self.api_key:
+        if not self.client:
             raise Exception("API Key is missing")
 
         try:
