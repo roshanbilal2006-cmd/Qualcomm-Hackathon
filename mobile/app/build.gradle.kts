@@ -88,9 +88,8 @@ dependencies {
     implementation("androidx.camera:camera-view:${cameraxVersion}")
     implementation("androidx.camera:camera-extensions:${cameraxVersion}")
 
-    // Google Maps
-    implementation("com.google.maps.android:maps-compose:4.3.0")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    // OSMDroid for free maps without API Key
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
     
     // Location
     implementation("com.google.android.gms:play-services-location:21.1.0")

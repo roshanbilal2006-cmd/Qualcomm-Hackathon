@@ -1,5 +1,6 @@
 package com.landsense.ai.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,15 +12,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.*
 import com.landsense.ai.data.network.HeatmapPoint
 import com.landsense.ai.presentation.heatmap.HeatmapViewModel
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,34 +116,44 @@ fun HeatmapScreen(
 
 @Composable
 private fun HeatmapMapView(points: List<HeatmapPoint>) {
+    val context = LocalContext.current
+
+    // Initialize OSMDroid configuration
+    LaunchedEffect(Unit) {
+        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+        Configuration.getInstance().userAgentValue = context.packageName
+    }
+
     val firstPoint = points.firstOrNull()
     val centerLat = firstPoint?.latitude ?: 12.9716
     val centerLng = firstPoint?.longitude ?: 77.7500
 
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(LatLng(centerLat, centerLng), 12f)
-    }
-
-    GoogleMap(
+    AndroidView(
+        factory = { ctx ->
+            MapView(ctx).apply {
+                setTileSource(TileSourceFactory.MAPNIK)
+                setMultiTouchControls(true)
+                controller.setZoom(12.0)
+                controller.setCenter(GeoPoint(centerLat, centerLng))
+            }
+        },
         modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState,
-        properties = MapProperties(mapType = MapType.NORMAL),
-        uiSettings = MapUiSettings(zoomControlsEnabled = true)
-    ) {
-        points.forEach { point ->
-            val hue = scoreToHue(point.developmentScore)
-            Marker(
-                state = MarkerState(position = LatLng(point.latitude, point.longitude)),
-                title = point.stage ?: "Unknown Stage",
-                snippet = buildString {
+        update = { mapView ->
+            mapView.overlays.clear()
+            points.forEach { point ->
+                val marker = Marker(mapView)
+                marker.position = GeoPoint(point.latitude, point.longitude)
+                marker.title = point.stage ?: "Unknown Stage"
+                marker.snippet = buildString {
                     append("Score: ${point.developmentScore.toInt()}")
                     point.noiseDb?.let { append(" | Noise: ${it.toInt()}dB") }
                     point.dustPm25?.let { append(" | PM2.5: ${it.toInt()}") }
-                },
-                icon = BitmapDescriptorFactory.defaultMarker(hue)
-            )
+                }
+                mapView.overlays.add(marker)
+            }
+            mapView.invalidate()
         }
-    }
+    )
 }
 
 @Composable
@@ -185,11 +199,6 @@ private fun HeatmapListView(points: List<HeatmapPoint>) {
             }
         }
     }
-}
-
-private fun scoreToHue(score: Double): Float {
-    // Green (high score) → Yellow → Red (low score)
-    return (score / 100.0 * 120.0).toFloat().coerceIn(0f, 120f)
 }
 
 @Composable
