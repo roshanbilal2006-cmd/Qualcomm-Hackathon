@@ -13,7 +13,7 @@ class SettingsRepository @Inject constructor(
     private val prefs: SharedPreferences = context.getSharedPreferences("landsense_settings", Context.MODE_PRIVATE)
 
     fun getLaptopIp(): String {
-        return prefs.getString("LAPTOP_IP", "192.168.1.100") ?: "192.168.1.100"
+        return prefs.getString("LAPTOP_IP", "172.16.150.243") ?: "172.16.150.243"
     }
 
     fun setLaptopIp(ip: String) {
