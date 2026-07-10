@@ -4,7 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
+    // secrets plugin removed — no Google Maps API key needed
 }
 
 android {
@@ -22,7 +22,7 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        manifestPlaceholders["MAPS_API_KEY"] = ""
+        // No Google Maps API key required — using OSMDroid (OpenStreetMap)
     }
 
     buildTypes {
@@ -88,7 +88,7 @@ dependencies {
     implementation("androidx.camera:camera-view:${cameraxVersion}")
     implementation("androidx.camera:camera-extensions:${cameraxVersion}")
 
-    // OSMDroid for free maps without API Key
+    // OSMDroid — OpenStreetMap (same map engine as the laptop web dashboard, no API key needed)
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     
     // Location
