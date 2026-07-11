@@ -6,9 +6,9 @@ load_dotenv()
 
 class LLMService:
     def __init__(self):
-        self.api_key = os.getenv("OPENROUTER_API_KEY")
-        self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-        self.model = os.getenv("OPENROUTER_MODEL", "google/gemma-3-4b-it:free")
+        self.api_key = os.getenv("LLM_API_KEY")
+        self.base_url = os.getenv("LLM_BASE_URL", "https://aisuite.cirrascale.com/apis/v2")
+        self.model = os.getenv("LLM_MODEL", "Llama-3.3-70B")
         self.client = None
         if self.api_key:
             self.client = OpenAI(

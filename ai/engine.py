@@ -59,33 +59,33 @@ class ImageDecodeError(ValueError):
 
 class VisionInferenceEngine:
     """
-    Contract-stable OpenRouter + OpenCV vision engine boundary.
+    Contract-stable Cirrascale + OpenCV vision engine boundary.
 
     OpenCV extracts deterministic scene metrics for validation and embeddings.
-    OpenRouter is the primary VLM path when OPENROUTER_API_KEY is configured;
+    Cirrascale is the primary VLM path when LLM_API_KEY is configured;
     if the key or API is unavailable, the service falls back to OpenCV-only
     stage estimation while preserving the same backend contract.
     """
 
-    def __init__(self, model_name: str = "OpenRouter+OpenCV", embedding_size: int = 128):
+    def __init__(self, model_name: str = "Cirrascale+OpenCV", embedding_size: int = 128):
         if load_dotenv:
             load_dotenv()
 
         started = time.perf_counter()
         self.model_name = model_name
         self.embedding_size = embedding_size
-        self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
-        self.openrouter_base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-        self.openrouter_vision_model = os.getenv("OPENROUTER_VISION_MODEL", "openai/gpt-5.6-luna")
-        self.openrouter_referer = os.getenv("OPENROUTER_HTTP_REFERER")
-        self.openrouter_title = os.getenv("OPENROUTER_APP_TITLE", "LandSense")
-        self._openrouter_client = None
-        self._openrouter_error = None
-        if self.openrouter_api_key:
-            self.runtime_backend = f"OpenRouter vision + OpenCV ({self.openrouter_vision_model})"
-            self.device = "OpenRouter cloud VLM + local OpenCV"
+        self.llm_api_key = os.getenv("LLM_API_KEY")
+        self.llm_base_url = os.getenv("LLM_BASE_URL", "https://aisuite.cirrascale.com/apis/v2")
+        self.llm_model = os.getenv("LLM_MODEL", "Llama-3.3-70B")
+        self.llm_referer = os.getenv("LLM_HTTP_REFERER")
+        self.llm_title = os.getenv("LLM_APP_TITLE", "LandSense")
+        self._llm_client = None
+        self._llm_error = None
+        if self.llm_api_key:
+            self.runtime_backend = f"Cirrascale vision + OpenCV ({self.llm_model})"
+            self.device = "Cirrascale cloud VLM + local OpenCV"
         else:
-            self.runtime_backend = "OpenCV fallback (OPENROUTER_API_KEY missing)"
+            self.runtime_backend = "OpenCV fallback (LLM_API_KEY missing)"
             self.device = "local OpenCV"
         self.loaded = True
         self.load_time_ms = round((time.perf_counter() - started) * 1000, 2)
@@ -107,8 +107,8 @@ class VisionInferenceEngine:
 
         stage, progress = self._estimate_stage(combined)
         confidence = self._estimate_confidence(combined, len(decoded))
-        vlm_result = self._predict_with_openrouter(decoded, combined, stage, progress, confidence)
-        inference_source = "openrouter" if vlm_result else "opencv_fallback"
+        vlm_result = self._predict_with_llm(decoded, combined, stage, progress, confidence)
+        inference_source = "cirrascale" if vlm_result else "opencv_fallback"
         if vlm_result:
             stage = vlm_result.get("construction_stage", stage)
             progress = vlm_result.get("progress_percentage", progress)
@@ -133,42 +133,42 @@ class VisionInferenceEngine:
             "model": self.model_name,
             "device": self.device,
             "runtime_backend": self.runtime_backend,
-            "ai_backend": "openrouter_opencv",
+            "ai_backend": "llm_opencv",
             "inference_source": inference_source,
             "model_artifacts_loaded": False,
             "model_load_error": None,
-            "openrouter_enabled": bool(self.openrouter_api_key),
-            "openrouter_model": self.openrouter_vision_model if self.openrouter_api_key else None,
-            "openrouter_error": self._openrouter_error,
+            "llm_enabled": bool(self.llm_api_key),
+            "llm_model": self.llm_model if self.llm_api_key else None,
+            "cirrascale_error": self._llm_error,
             "image_count": len(decoded),
             "site_likelihood": round(combined.construction_likelihood, 2),
             "opencv_analysis": self._analysis_payload(combined),
         }
 
-    def _get_openrouter_client(self):
-        if self._openrouter_client is not None:
-            return self._openrouter_client
-        if not self.openrouter_api_key:
+    def _get_llm_client(self):
+        if self._llm_client is not None:
+            return self._llm_client
+        if not self.llm_api_key:
             return None
 
         try:
             from openai import OpenAI
 
-            headers = {"X-Title": self.openrouter_title}
-            if self.openrouter_referer:
-                headers["HTTP-Referer"] = self.openrouter_referer
-            self._openrouter_client = OpenAI(
-                base_url=self.openrouter_base_url,
-                api_key=self.openrouter_api_key,
+            headers = {"X-Title": self.llm_title}
+            if self.llm_referer:
+                headers["HTTP-Referer"] = self.llm_referer
+            self._llm_client = OpenAI(
+                base_url=self.llm_base_url,
+                api_key=self.llm_api_key,
                 default_headers=headers,
             )
-            return self._openrouter_client
+            return self._llm_client
         except Exception as exc:
-            self._openrouter_error = str(exc)
-            logger.exception("OpenRouter client could not be initialized")
+            self._llm_error = str(exc)
+            logger.exception("Cirrascale client could not be initialized")
             return None
 
-    def _predict_with_openrouter(
+    def _predict_with_llm(
         self,
         images: list[Image.Image],
         features: ImageFeatures,
@@ -176,7 +176,7 @@ class VisionInferenceEngine:
         fallback_progress: int,
         fallback_confidence: float,
     ) -> dict | None:
-        client = self._get_openrouter_client()
+        client = self._get_llm_client()
         if client is None:
             return None
 
@@ -201,7 +201,7 @@ class VisionInferenceEngine:
 
         try:
             response = client.chat.completions.create(
-                model=self.openrouter_vision_model,
+                model=self.llm_model,
                 messages=[
                     {
                         "role": "system",
@@ -216,13 +216,13 @@ class VisionInferenceEngine:
             text = self._message_content_to_text(response.choices[0].message.content)
             parsed = self._parse_vlm_json(text)
             if not parsed:
-                self._openrouter_error = "OpenRouter returned unparsable JSON"
+                self._llm_error = "Cirrascale returned unparsable JSON"
                 return None
-            self._openrouter_error = None
+            self._llm_error = None
             return parsed
         except Exception as exc:
-            self._openrouter_error = str(exc)
-            logger.exception("OpenRouter vision inference failed; falling back to local analysis")
+            self._llm_error = str(exc)
+            logger.exception("Cirrascale vision inference failed; falling back to local analysis")
             return None
 
     def _image_to_data_url(self, image: Image.Image) -> str:
@@ -288,7 +288,7 @@ class VisionInferenceEngine:
         cleaned = re.sub(r'^[\s,"\':;.-]+', "", cleaned)
         if len(cleaned) > 360:
             cleaned = cleaned[:357].rsplit(" ", 1)[0].rstrip(".,;:") + "..."
-        return cleaned or "OpenRouter reviewed the uploaded image."
+        return cleaned or "Cirrascale reviewed the uploaded image."
 
     def _decode_image(self, image_ref: str) -> Image.Image:
         try:
@@ -568,9 +568,9 @@ class VisionInferenceEngine:
     ) -> str:
         equipment_cue = self._effective_equipment_signal(features)
         if vlm_result:
-            vlm_description = vlm_result.get("description") or "OpenRouter returned a construction-stage assessment."
+            vlm_description = vlm_result.get("description") or "Cirrascale returned a construction-stage assessment."
             return (
-                f"{stage} is estimated at {progress}% progress using OpenRouter vision with OpenCV guardrails. "
+                f"{stage} is estimated at {progress}% progress using Cirrascale vision with OpenCV guardrails. "
                 f"{vlm_description} "
                 f"OpenCV metrics: site-likelihood={features.construction_likelihood:.2f}, "
                 f"concrete={features.concrete_fraction:.2f}, earth={features.earth_fraction:.2f}, "
@@ -589,7 +589,7 @@ class VisionInferenceEngine:
         activity = "active construction cues" if features.line_density > 0.16 or features.edge_density > 0.12 else "limited visible activity"
         return (
             f"{stage} is estimated at {progress}% progress by OpenCV fallback analysis. "
-            f"OpenRouter was not used for this request ({inference_source}); the image set shows {activity}. "
+            f"Cirrascale was not used for this request ({inference_source}); the image set shows {activity}. "
             f"OpenCV metrics: site-likelihood={features.construction_likelihood:.2f}, "
             f"concrete={features.concrete_fraction:.2f}, earth={features.earth_fraction:.2f}, "
             f"equipment-cue={equipment_cue:.2f}, lines={features.line_density:.2f}."

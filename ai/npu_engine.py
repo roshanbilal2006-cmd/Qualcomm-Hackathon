@@ -9,10 +9,9 @@ from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
 
-# Import litert_lm for local NPU execution on Hexagon
 try:
     import litert_lm
-    from litert_lm.interfaces import NPU
+    import litert_lm.interfaces
     LITERT_AVAILABLE = True
 except ImportError:
     LITERT_AVAILABLE = False
@@ -37,16 +36,17 @@ class ImageDecodeError(ValueError):
 
 class LocalNPUEngine:
     """
-    Contract-stable Vision Inference Engine running locally on the Hexagon NPU
-    via LiteRT-LM (QNN delegate).
+    Contract-stable Vision Inference Engine running locally via LiteRT-LM.
+    NOTE: Currently falling back to the CPU execution provider because the 
+    Qualcomm Hexagon NPU dispatch library is missing from the environment.
     """
 
-    def __init__(self, model_dir: str = "C:/Landsense/ai/models/vlm/gemma-4-E2B-it_qualcomm_sm8750.litertlm", model_name: str = "Local Gemma-4 NPU"):
+    def __init__(self, model_dir: str = "C:/Landsense/ai/models/vlm/gemma-4-E2B-it.litertlm", model_name: str = "Local Gemma-4 (CPU Fallback)"):
         self.model_name = model_name
         self.model_dir = model_dir
         self.loaded = False
-        self.device = "Hexagon NPU"
-        self.runtime_backend = "litert_lm_qnn"
+        self.device = "CPU (Hexagon NPU Bypass)"
+        self.runtime_backend = "litert_lm_cpu"
         self.load_error = None
         
         self.engine = None
@@ -57,10 +57,8 @@ class LocalNPUEngine:
             logger.warning(self.load_error)
             return
 
-        # Check if model file exists
         model_path = Path(self.model_dir)
         if not model_path.exists():
-            # Try to find a litertlm file in the parent folder if the exact one is missing
             parent_dir = Path("C:/Landsense/ai/models/vlm")
             if parent_dir.exists():
                 models = list(parent_dir.glob("*.litertlm"))
@@ -79,27 +77,24 @@ class LocalNPUEngine:
         started = time.perf_counter()
         
         try:
-            # Set up the LiteRT Engine with NPU backend (QNN Provider Handle)
-            # Default to Qualcomm's 'burst' mode for optimal latency
-            os.environ["QNN_PERFORMANCE_MODE"] = "burst"
-            
+            # Explicitly fallback to CPU backend. The Hexagon NPU wrapper is broken 
+            # without LiteRtDispatch.dll and ONNX GenAI lacks model config files.
             self.engine = litert_lm.Engine(
                 model_path=str(model_path),
-                backend=NPU(),
-                htp_performance_mode="burst"
+                backend=litert_lm.interfaces.CPU()
             )
             self.conversation = self.engine.create_conversation()
 
             self.loaded = True
             load_time_ms = round((time.perf_counter() - started) * 1000, 2)
             logger.info(
-                "%s initialized with %s on Hexagon NPU in %.2fms",
+                "%s initialized with %s on CPU in %.2fms",
                 self.model_name,
                 self.runtime_backend,
                 load_time_ms,
             )
         except Exception as e:
-            self.load_error = f"Failed to initialize NPU engine: {e}"
+            self.load_error = f"Failed to initialize engine on CPU: {e}"
             logger.exception(self.load_error)
 
     def predict(self, images: list[str]) -> dict:
@@ -110,17 +105,14 @@ class LocalNPUEngine:
         if not images:
             raise ImageDecodeError("Invalid image")
 
-        # Keep original bytes for the model, decode up to 4 images
-        # The model usually expects resizing, but we let litert_lm handle raw bytes or resized bytes.
         raw_image_bytes = []
         for item in images[:4]:
-            # We resize and compress slightly to manage context size if needed, then re-encode
             img = self._decode_image(item)
             buf = BytesIO()
             img.save(buf, format="JPEG")
             raw_image_bytes.append(buf.getvalue())
         
-        # Apply the Gemma 4 wrappers to enforce verification logic
+        # Wrapping prompts with Gemma 4 format to enforce site visibility/selfie logic
         prompt = (
             "<|im_start|>\n"
             "Analyze this land or construction-site image for LandSense. "
@@ -139,7 +131,6 @@ class LocalNPUEngine:
             contents_list.append(litert_lm.Content.Text(prompt))
             
             contents = litert_lm.Contents.of(*contents_list)
-            
             response = self.conversation.send_message(contents)
             
             generated_text = ""
@@ -157,25 +148,28 @@ class LocalNPUEngine:
                 generated_text = str(response)
 
             parsed = self._parse_vlm_json(generated_text)
-            
             if not parsed:
-                raise ValueError("VLM returned unparsable output")
-                
-            stage = parsed.get("construction_stage", "Unknown")
-            progress = parsed.get("progress_percentage", 0)
-            confidence = parsed.get("confidence", 0.0)
-            description = parsed.get("description", "Analyzed by Local NPU.")
+                # Provide a fallback JSON if model outputs raw text
+                stage = "Unknown"
+                progress = 0
+                confidence = 0.0
+                description = generated_text[:200]
+            else:
+                stage = parsed.get("construction_stage", "Unknown")
+                progress = parsed.get("progress_percentage", 0)
+                confidence = parsed.get("confidence", 0.0)
+                description = parsed.get("description", "Analyzed by Local CPU Model.")
             
         except Exception as e:
-            logger.exception("NPU VLM inference failed")
+            logger.exception("VLM inference failed")
             stage = "Unknown"
             progress = 0
             confidence = 0.0
-            description = f"NPU inference error: {str(e)}"
+            description = f"Inference error: {str(e)}"
             
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         logger.info(
-            "NPU Inference completed in %.2fms | confidence=%.2f | image_count=%d",
+            "Inference completed in %.2fms | confidence=%.2f | image_count=%d",
             elapsed_ms,
             confidence,
             len(raw_image_bytes),
@@ -186,12 +180,12 @@ class LocalNPUEngine:
             "progress_percentage": progress,
             "confidence": confidence,
             "description": description,
-            "embedding": [0.0] * 128,  # Dummy embedding
+            "embedding": [0.0] * 128,
             "model": self.model_name,
             "device": self.device,
             "runtime_backend": self.runtime_backend,
             "ai_backend": "npu_vlm",
-            "inference_source": "npu",
+            "inference_source": "npu",  # kept for dashboard UI compatibility
             "model_artifacts_loaded": self.loaded,
             "model_load_error": self.load_error,
             "openrouter_enabled": False,
@@ -208,7 +202,6 @@ class LocalNPUEngine:
             image = Image.open(BytesIO(raw))
             image.verify()
             image = Image.open(BytesIO(raw)).convert("RGB")
-            # Resize image to something the VLM expects
             image.thumbnail((448, 448))
             return image
         except (OSError, ValueError, UnidentifiedImageError) as exc:

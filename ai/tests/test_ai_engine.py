@@ -36,7 +36,7 @@ class FakeChat:
         self.completions = completions
 
 
-class FakeOpenRouterClient:
+class FakeCirrascaleClient:
     def __init__(self, content: str):
         self.completions = FakeCompletions(content)
         self.chat = FakeChat(self.completions)
@@ -82,7 +82,7 @@ def make_warm_anime_portrait_image() -> Image.Image:
 
 
 def test_warm_anime_portrait_is_not_classified_as_construction(monkeypatch):
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
     engine = VisionInferenceEngine()
 
     result = engine.predict([image_to_data_url(make_warm_anime_portrait_image())])
@@ -94,7 +94,7 @@ def test_warm_anime_portrait_is_not_classified_as_construction(monkeypatch):
 
 
 def test_mock_construction_image_still_scores_as_site(monkeypatch):
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
     engine = VisionInferenceEngine()
 
     result = engine.predict([image_to_data_url(make_mock_construction_image())])
@@ -104,23 +104,23 @@ def test_mock_construction_image_still_scores_as_site(monkeypatch):
     assert result["site_likelihood"] >= 0.35
 
 
-def test_openrouter_vision_result_overrides_local_estimate(monkeypatch):
-    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.setenv("OPENROUTER_VISION_MODEL", "test/vision-model")
+def test_cirrascale_vision_result_overrides_local_estimate(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_MODEL", "test/vision-model")
     engine = VisionInferenceEngine()
-    fake_client = FakeOpenRouterClient(
+    fake_client = FakeCirrascaleClient(
         '{"construction_stage":"Finishing","progress_percentage":88,'
         '"confidence":0.91,"description":"Exterior work appears nearly complete."}'
     )
-    engine._openrouter_client = fake_client
+    engine._llm_client = fake_client
 
     result = engine.predict([image_to_data_url(make_mock_construction_image())])
 
     assert result["construction_stage"] == "Finishing"
     assert result["progress_percentage"] == 88
     assert result["confidence"] == 0.91
-    assert result["openrouter_enabled"] is True
-    assert result["openrouter_model"] == "test/vision-model"
-    assert result["openrouter_error"] is None
+    assert result["llm_enabled"] is True
+    assert result["llm_model"] == "test/vision-model"
+    assert result["cirrascale_error"] is None
     assert fake_client.completions.last_kwargs["model"] == "test/vision-model"
     assert fake_client.completions.last_kwargs["messages"][1]["content"][1]["type"] == "image_url"

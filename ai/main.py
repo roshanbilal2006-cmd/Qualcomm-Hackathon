@@ -20,7 +20,7 @@ logger = logging.getLogger("landsense.ai")
 app = FastAPI(title="LandSense AI Service", version="1.0.0")
 
 # Attempt to load NPU engine first
-npu_engine = LocalNPUEngine(model_dir="ai/models/vlm")
+npu_engine = LocalNPUEngine(model_dir="ai/models/vlm/gemma-4-E2B-it.litertlm")
 if getattr(npu_engine, "loaded", False):
     engine = npu_engine
     logger.info("Using Local NPU Engine")
