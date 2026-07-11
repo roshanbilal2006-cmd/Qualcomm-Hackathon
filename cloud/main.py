@@ -97,4 +97,4 @@ def chat_assistant(req: schemas.ChatRequest, rs: RetrievalService = Depends(get_
 if __name__ == "__main__":
     # pyrefly: ignore [missing-import]
     import uvicorn
-    uvicorn.run("cloud.main:app", host="0.0.0.0", port=8003, reload=True)
+    uvicorn.run("cloud.main:app", host="0.0.0.0", port=8003, reload=True, reload_dirs=["cloud"])

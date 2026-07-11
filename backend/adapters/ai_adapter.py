@@ -13,7 +13,7 @@ class AIAdapter:
         for the existing backend pipeline.
         """
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=70.0) as client:
                 response = await client.post(
                     f"{self.service_url}/predict",
                     json={"images": images}

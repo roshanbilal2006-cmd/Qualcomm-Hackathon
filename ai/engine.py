@@ -12,8 +12,13 @@ from pathlib import Path
 from statistics import mean
 from typing import Iterable
 
-import cv2
-import numpy as np
+try:
+    import cv2
+    import numpy as np
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+
 from PIL import Image, ImageStat, UnidentifiedImageError
 
 try:
@@ -161,6 +166,8 @@ class VisionInferenceEngine:
                 base_url=self.llm_base_url,
                 api_key=self.llm_api_key,
                 default_headers=headers,
+                timeout=60.0,   # Increase timeout to 60s for slow LLM inference
+                max_retries=1,  # one retry max; the 500 "Models Busy" does not benefit from many retries
             )
             return self._llm_client
         except Exception as exc:
@@ -373,6 +380,19 @@ class VisionInferenceEngine:
         return mean(saturation_values) / 255.0
 
     def _opencv_scene_features(self, image: Image.Image) -> dict[str, float]:
+        if not OPENCV_AVAILABLE:
+            return {
+                "edge_density": 0.0,
+                "line_density": 0.0,
+                "rectangular_structure": 0.0,
+                "concrete_fraction": 0.0,
+                "earth_fraction": 0.0,
+                "sky_fraction": 0.0,
+                "vegetation_fraction": 0.0,
+                "equipment_color_fraction": 0.0,
+                "artificial_color_score": 0.0,
+            }
+
         rgb = np.array(image.convert("RGB"))
         bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
         hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
