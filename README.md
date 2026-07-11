@@ -2,7 +2,7 @@
 
 Multi-device construction intelligence platform powered by Snapdragon AI.
 
-This branch, `AI-VLM`, is the current integration branch for the hackathon build. It contains the backend orchestration layer, cloud/community layer, laptop-side AI/VLM image processing boundary, IoT simulator, MCP/RERA simulator, and web dashboard.
+This branch, `AI-VLM`, is the current integration branch for the hackathon build. It contains the Android mobile app, backend orchestration layer, cloud/community layer, laptop-side AI/VLM image processing boundary, IoT simulator, MCP/RERA simulator, and web dashboard.
 
 The intended product flow is simple:
 
@@ -36,6 +36,10 @@ Android should not run heavy AI inference for this version. The phone only captu
 - Cloud/community intelligence service on port `8003`.
 - MCP/RERA simulator on port `8004`.
 - Static web dashboard on port `8080`.
+- Native Android app in `mobile/` built with Kotlin, Jetpack Compose, CameraX, Hilt, Retrofit, Room, OSMDroid/OpenStreetMap, and TensorFlow Lite Task Vision.
+- Android onboarding, home dashboard, backend health indicator, laptop IP settings, live CameraX capture, optional speech query, scan upload, result report, scan history, community heatmap, and chat assistant screens.
+- Android captures up to 4 photos, compresses/resizes them to JPEG data URLs, tags scans with GPS and UTC timestamp, sends them to `POST /observation`, and stores successful observations in Room for history fallback.
+- Android runs a lightweight on-device construction classifier from `mobile/app/src/main/assets/construction_model.tflite` for immediate local feedback, while backend/OpenRouter remains the source of the final fused report.
 - SQLite local database with seeded RERA/demo projects.
 - Backend-to-cloud sync for processed observations.
 - Heatmap and history APIs.
@@ -48,21 +52,13 @@ Android should not run heavy AI inference for this version. The phone only captu
 
 ### Android App
 
-The real Android app is still the main missing client piece.
+The Android client is implemented in `mobile/`. Remaining client work is mostly demo polish and hardening:
 
-It must:
-
-- Capture 1-4 construction-site photos.
-- Capture GPS latitude/longitude.
-- Attach UTC timestamp.
-- Compress/resize images before upload.
-- Convert images to Base64 or `data:image/jpeg;base64,...`.
-- Send the scan to the laptop backend at `POST /observation`.
-- Display the returned construction report.
-- Fetch `/heatmap` and render other users' processed observations.
-- Fetch `/history` for the current user/device.
-- Show sensor readings from other users with date/time where available.
-- Let demo users configure the laptop backend IP address.
+- Replace the committed default laptop IP in `SettingsRepository` with the current demo laptop IP from the Settings screen before running on a device.
+- Validate the bundled `construction_model.tflite` labels and accuracy against real construction-site photos.
+- Add richer offline upload retry if a scan is captured while the backend is unreachable. The app currently caches successful observations and falls back to Room for history/result reads.
+- Expand map controls around the existing OSMDroid/OpenStreetMap heatmap. The My Location FAB is currently a demo placeholder.
+- Improve production error handling for camera/image decode, speech recognizer availability, and backend validation errors.
 
 ### OpenRouter VLM
 
@@ -316,10 +312,12 @@ Heatmap points can be colored by `development_score`:
 
 ```text
 Android App
+  Jetpack Compose UI
   CameraX photos
   GPS coordinates
   UTC timestamp
-  optional query
+  optional speech query
+  lightweight on-device TFLite stage hint
         |
         | POST /observation
         v
@@ -354,26 +352,44 @@ Cloud Community Layer
         v
 Android App
   displays report
-  displays heatmap/history
+  caches successful observations in Room
+  displays OSMDroid heatmap/history/chat
 ```
 
-## Android Implementation Notes
+## Android Mobile App
 
-Recommended stack:
+Implemented stack:
 
 - Kotlin.
+- Jetpack Compose + Material 3.
 - CameraX.
 - FusedLocationProviderClient.
-- Retrofit or Ktor client.
+- Retrofit + OkHttp + kotlinx serialization.
 - Coroutines.
-- Simple MVVM.
+- Hilt dependency injection.
+- Room local cache.
+- OSMDroid/OpenStreetMap heatmap.
+- Android Speech Recognizer for optional voice queries.
+- TensorFlow Lite Task Vision local classifier.
+- MVVM with repository/data layers.
+
+Implemented screens:
+
+- Splash and onboarding.
+- Home dashboard with backend status, total scans, average development score, and quick actions.
+- Capture screen with live CameraX preview, permission request, 1-4 photo capture, thumbnail removal, optional speech query, local AI prediction display, GPS lookup, and upload progress.
+- Result screen with construction stage, progress, confidence, development score, IoT noise/dust, sensor status, RERA matches, AI summary, metadata, and Android share sheet.
+- History screen backed by `/history?owner_id=...` with Room fallback.
+- Community heatmap using `/heatmap`, OSMDroid circles/markers, list view, and All/Heavy/Standard/Completed filters.
+- Chat assistant screen using `POST /chat`.
+- Settings screen for laptop LAN IP. Enter only the IP address; the app rewrites requests to `http://<IP>:8000`.
 
 Image handling:
 
 - Resize longest side to around 1024 px.
 - JPEG quality around 70-80.
 - Encode as `data:image/jpeg;base64,...`.
-- Start with one image; support up to four images later.
+- Support up to four captured images.
 
 Network notes:
 
@@ -387,6 +403,7 @@ Rules:
 - Android must not call AI, IoT, MCP, or cloud services directly.
 - Raw images go to laptop backend/AI only.
 - Cloud receives processed observations, not raw images.
+- On-device TFLite classification is local feedback only; final report fields come from backend fusion.
 
 ## Project Structure
 
@@ -406,6 +423,14 @@ backend/
 cloud/                 Community history, heatmap, latest sensor, chat hooks
 iot/                   Arduino telemetry simulator
 mcp/                   MCP/RERA simulator
+mobile/                Native Android app
+  app/src/main/java/com/landsense/ai/
+    ui/screens/        Compose screens for home, capture, result, history, heatmap, chat, settings
+    presentation/      ViewModels and UI state
+    data/network/      Retrofit API models/service
+    data/local/        Room cache
+    data/repository/   Observation and settings repositories
+    util/              GPS, network, and on-device classifier helpers
 web/                   Browser demo dashboard
 scripts/               Run/test/demo helpers
 docs/                  Architecture and API docs
@@ -413,8 +438,9 @@ docs/                  Architecture and API docs
 
 ## Known Cleanup Items
 
-- `android-app/local.properties` is machine-specific and should not be committed.
+- `mobile/local.properties` is machine-specific and should not be committed.
 - `cloud_data.db` may appear as an untracked local runtime database.
 - The AI engine is OpenRouter + OpenCV. Without `OPENROUTER_API_KEY`, prediction still works in OpenCV fallback mode but cloud VLM reasoning is disabled.
 - Invalid Android images currently fall back to mock AI output through the adapter; for production, invalid images should return a clear validation error.
+- The mobile heatmap uses OSMDroid/OpenStreetMap, so no Google Maps key is required.
 
