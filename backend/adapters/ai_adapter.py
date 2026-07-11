@@ -29,13 +29,13 @@ class AIAdapter:
         except Exception as e:
             logger.error(f"Failed to connect to AI Service at {self.service_url}: {str(e)}")
         
-        # Do not fabricate construction progress if the Qualcomm VLM service is unavailable.
+        # Do not fabricate construction progress if the OpenRouter/OpenCV service is unavailable.
         logger.warning("AI service unavailable; returning explicit unknown visual result.")
         return {
             "stage": "Unknown",
             "progress": 0.0,
             "confidence": 0.0,
-            "description": "Qualcomm FastVLM service unavailable; visual construction evidence was not verified.",
+            "description": "OpenRouter/OpenCV AI service unavailable; visual construction evidence was not verified.",
             "embedding": [0.01] * 128
         }
 

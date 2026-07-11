@@ -12,7 +12,7 @@ except ModuleNotFoundError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("landsense.ai")
 
-app = FastAPI(title="LandSense FastVLM AI Service", version="1.0.0")
+app = FastAPI(title="LandSense OpenRouter + OpenCV AI Service", version="1.0.0")
 engine = VisionInferenceEngine()
 
 
@@ -39,9 +39,14 @@ async def health():
         "status": "loaded" if engine.loaded else "not_loaded",
         "device": engine.device,
         "runtime_backend": engine.runtime_backend,
-        "model_artifacts_loaded": bool(engine.transformers_model_dir or engine.model_artifacts),
-        "model_dir": str(engine.model_dir),
-        "transformers_model_dir": str(engine.transformers_model_dir) if engine.transformers_model_dir else None,
+        "ai_backend": "openrouter_opencv",
+        "model_artifacts_loaded": False,
+        "model_dir": None,
+        "transformers_model_dir": None,
+        "openrouter_enabled": bool(engine.openrouter_api_key),
+        "openrouter_model": engine.openrouter_vision_model if engine.openrouter_api_key else None,
+        "openrouter_error": engine._openrouter_error,
+        "opencv_enabled": True,
         "inference_ready": engine.loaded,
     }
 

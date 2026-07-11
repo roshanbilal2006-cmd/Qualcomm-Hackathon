@@ -34,7 +34,7 @@ class ObservationPipeline:
         if not input_data.images:
             logger.warning("No images provided in observation request.")
 
-        # Step 3: Trigger local AI Prediction (FastVLM simulation)
+        # Step 3: Trigger OpenRouter + OpenCV visual prediction
         ai_result = await self.ai_adapter.predict(input_data.images)
         logger.info(f"AI Prediction received: Stage={ai_result.get('stage')}, Progress={ai_result.get('progress')}%")
 
