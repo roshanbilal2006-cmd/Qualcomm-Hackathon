@@ -239,11 +239,13 @@ function showObservationDetails(id) {
   const confPct = obs.confidence !== null ? Math.round(obs.confidence * 100) : "--";
   document.getElementById("det-confidence").innerText = `${confPct}%`;
   document.getElementById("det-time").innerText = new Date(obs.timestamp).toLocaleTimeString();
+  renderOpenCvAnalysis(obs.opencv_analysis || {});
 
   // Sensors
-  const hasSensors = obs.sensor_status === "connected";
-  document.getElementById("det-noise").innerText = hasSensors ? `${obs.noise_db} dB` : "-- dB";
-  document.getElementById("det-pm25").innerText = hasSensors ? `${obs.dust_pm25} ug/m3` : "-- ug/m3";
+  const hasNoise = obs.noise_db !== null && obs.noise_db !== undefined;
+  const hasPm25 = obs.dust_pm25 !== null && obs.dust_pm25 !== undefined;
+  document.getElementById("det-noise").innerText = hasNoise ? `${obs.noise_db} dB` : "-- dB";
+  document.getElementById("det-pm25").innerText = hasPm25 ? `${obs.dust_pm25} ug/m3` : "-- ug/m3";
   
   const statusBadge = document.getElementById("det-sensor-status");
   statusBadge.className = `badge-status ${obs.sensor_status}`;
@@ -284,9 +286,40 @@ function showObservationDetails(id) {
 function getRiskRating(obs) {
   const summary = (obs.summary || "").toLowerCase();
   const reraProjects = obs.rera_projects || [];
+  const isNonConstruction = (obs.construction_stage || "").toLowerCase() === "unknown" && Number(obs.progress || 0) === 0;
+  if (isNonConstruction || summary.includes("non-construction") || summary.includes("irrelevant")) return "LOW";
   if (summary.includes("unauthorized") || summary.includes("disputed")) return "HIGH";
   if (obs.sensor_status === "degraded" || reraProjects.length === 0) return "MEDIUM";
   return "LOW";
+}
+
+function renderOpenCvAnalysis(analysis) {
+  const container = document.getElementById("det-opencv-grid");
+  if (!container) return;
+
+  const metrics = [
+    ["Site", analysis.site_likelihood],
+    ["Concrete", analysis.concrete_fraction],
+    ["Earth", analysis.earth_fraction],
+    ["Lines", analysis.line_density],
+    ["Rectangles", analysis.rectangular_structure],
+    ["Equipment Cue", analysis.equipment_cue_fraction ?? analysis.equipment_color_fraction]
+  ];
+
+  if (!Object.keys(analysis).length) {
+    container.innerHTML = `<div class="feed-empty compact">No OpenCV metric payload stored for this observation.</div>`;
+    return;
+  }
+
+  container.innerHTML = metrics.map(([label, value]) => {
+    const numericValue = Number(value || 0);
+    return `
+      <div class="opencv-metric">
+        <span class="opencv-label">${label}</span>
+        <span class="opencv-value">${Math.round(numericValue * 100)}%</span>
+      </div>
+    `;
+  }).join("");
 }
 
 async function submitObservation(payload) {

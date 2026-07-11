@@ -34,23 +34,31 @@ class ObservationPipeline:
         if not input_data.images:
             logger.warning("No images provided in observation request.")
 
-        # Step 3: Trigger local AI Prediction (FastVLM simulation)
+        # Step 3: Trigger OpenRouter + OpenCV visual prediction
         ai_result = await self.ai_adapter.predict(input_data.images)
         logger.info(f"AI Prediction received: Stage={ai_result.get('stage')}, Progress={ai_result.get('progress')}%")
 
-        # Step 4: Use device-supplied telemetry when present, otherwise request Arduino IoT telemetry
+        # Step 4: Use only telemetry that was explicitly supplied with the upload.
         if input_data.noise_db is not None or input_data.dust_pm25 is not None or input_data.dust_pm10 is not None:
             sensor_data = {
-                "noise_db": input_data.noise_db or 0.0,
-                "pm25": input_data.dust_pm25 or 0.0,
-                "pm10": input_data.dust_pm10 or 0.0,
                 "timestamp": input_data.sensor_timestamp or input_data.timestamp,
                 "device_id": "WEB_UPLOAD_SENSOR",
                 "latitude": input_data.latitude,
                 "longitude": input_data.longitude
             }
+            if input_data.noise_db is not None:
+                sensor_data["noise_db"] = input_data.noise_db
+            if input_data.dust_pm25 is not None:
+                sensor_data["pm25"] = input_data.dust_pm25
+            if input_data.dust_pm10 is not None:
+                sensor_data["pm10"] = input_data.dust_pm10
         else:
-            sensor_data = await self.iot_adapter.get_sensor_data(input_data.latitude, input_data.longitude)
+            sensor_data = {
+                "timestamp": input_data.timestamp,
+                "device_id": "NO_SENSOR_INPUT",
+                "latitude": input_data.latitude,
+                "longitude": input_data.longitude
+            }
         
         # Step 5: Correlation Engine Checks
         # The sensor node reports its coordinates (either hardcoded or dynamic)
@@ -66,17 +74,20 @@ class ObservationPipeline:
             sensor_lon=sensor_lon
         )
 
-        noise_db = 0.0
-        pm25 = 0.0
-        pm10 = 0.0
+        noise_db = None
+        pm25 = None
+        pm10 = None
         sensor_status = "degraded"
 
         if is_correlated:
-            noise_db = sensor_data.get("noise_db", 0.0)
-            pm25 = sensor_data.get("pm25", 0.0)
-            pm10 = sensor_data.get("pm10", 0.0)
-            sensor_status = "connected"
-            logger.info("IoT sensor data correlated successfully.")
+            noise_db = sensor_data.get("noise_db")
+            pm25 = sensor_data.get("pm25")
+            pm10 = sensor_data.get("pm10")
+            sensor_status = "connected" if any(value is not None for value in (noise_db, pm25, pm10)) else "degraded"
+            if sensor_status == "connected":
+                logger.info("IoT sensor data correlated successfully.")
+            else:
+                logger.info("No dust/noise telemetry supplied with observation.")
         else:
             logger.warning("IoT sensor telemetry ignored (fails time or distance correlation window).")
 
@@ -131,7 +142,8 @@ class ObservationPipeline:
             "rera_projects": rera_projects,
             "development_score": fusion_result.get("development_score", 0.0),
             "summary": summary,
-            "embedding": ai_result.get("embedding", [])
+            "embedding": ai_result.get("embedding", []),
+            "opencv_analysis": ai_result.get("opencv_analysis", {})
         }
 
         # Step 9: Save observation to local SQLite DB history
@@ -155,6 +167,7 @@ class ObservationPipeline:
         db_obs.images = fused_observation["images"]
         db_obs.rera_projects = fused_observation["rera_projects"]
         db_obs.embedding = fused_observation["embedding"]
+        db_obs.opencv_analysis = fused_observation["opencv_analysis"]
 
         self.db.add(db_obs)
         self.db.commit()

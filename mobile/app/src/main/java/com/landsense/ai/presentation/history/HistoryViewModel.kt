@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.landsense.ai.data.network.ObservationResponse
 import com.landsense.ai.data.repository.ObservationRepository
+import com.landsense.ai.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,8 @@ data class HistoryState(
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    private val repository: ObservationRepository
+    private val repository: ObservationRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HistoryState())
@@ -32,7 +34,8 @@ class HistoryViewModel @Inject constructor(
     fun loadHistory() {
         viewModelScope.launch {
             _state.value = HistoryState(isLoading = true)
-            repository.getHistory(ownerId = "android-device-001")
+            val ownerId = settingsRepository.getOwnerId()
+            repository.getHistory(ownerId = ownerId)
                 .onSuccess { list ->
                     _state.value = HistoryState(isLoading = false, observations = list)
                 }
@@ -42,3 +45,4 @@ class HistoryViewModel @Inject constructor(
         }
     }
 }
+

@@ -31,7 +31,7 @@ Android should not run heavy AI inference for this version. The phone only captu
 
 - FastAPI backend orchestrator on port `8000`.
 - Laptop-side AI service on port `8001`.
-- AI image engine in `ai/engine.py` that decodes Base64/data URL images, extracts visual features, estimates construction stage/progress/confidence, and returns embeddings.
+- AI image engine in `ai/engine.py` that decodes Base64/data URL images, extracts OpenCV visual features, uses OpenRouter vision for construction stage/progress/confidence when `OPENROUTER_API_KEY` is configured, and returns embeddings.
 - IoT/Arduino simulator on port `8002`.
 - Cloud/community intelligence service on port `8003`.
 - MCP/RERA simulator on port `8004`.
@@ -41,6 +41,8 @@ Android should not run heavy AI inference for this version. The phone only captu
 - Heatmap and history APIs.
 - Correlation logic for matching camera scans with sensor readings.
 - Development score logic with explainable summary output.
+- Imported IoT + MCP REST data layer at the repository root, with mock RERA data,
+  demo sensor readings, and a serial Arduino adapter for live hackathon hardware.
 
 ## What Is Still Missing
 
@@ -62,9 +64,9 @@ It must:
 - Show sensor readings from other users with date/time where available.
 - Let demo users configure the laptop backend IP address.
 
-### Real VLM
+### OpenRouter VLM
 
-The AI branch now has a real laptop-side image-processing boundary, but it is still a heuristic placeholder, not a true FastVLM/LiteRT model. A real model can replace the internals of `VisionInferenceEngine` without changing the backend contract.
+The laptop AI service now uses OpenRouter as the primary VLM and OpenCV as the local visual preprocessing/guardrail layer. Set `OPENROUTER_API_KEY` in `.env` and choose a vision-capable model with `OPENROUTER_VISION_MODEL`. If the key or API is unavailable, the service falls back to OpenCV-only analysis while preserving the same backend contract.
 
 ### Real MCP
 
@@ -162,6 +164,33 @@ Run backend/cloud integration test:
 ```bash
 python scripts/test_backend_cloud_integration.py
 ```
+
+## Imported IoT + MCP REST Service
+
+The `mcp+IoT` branch is integrated as a root-level FastAPI service. It exposes a
+stable sensor/RERA contract through `main.py`, `routes/`, `services/`,
+`adapters/`, `interfaces/`, `models/`, `config/`, and `data/mock_rera.json`.
+
+Run it directly when you want to test that service by itself:
+
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8010
+```
+
+Useful endpoints:
+
+```text
+GET /status
+GET /sensor
+GET /rera
+GET /nearby_projects
+GET /project/{id}
+```
+
+By default it uses demo/mock mode from `.env.example`: `SENSOR_MODE=demo` and
+`RERA_MODE=mock`. Mock RERA data is stored in `data/mock_rera.json`. To use a
+real Arduino, set `SENSOR_MODE=live` and configure `ARDUINO_PORT` for the
+machine, for example `COM3` on Windows.
 
 ## Android Input Contract
 
@@ -386,6 +415,6 @@ docs/                  Architecture and API docs
 
 - `android-app/local.properties` is machine-specific and should not be committed.
 - `cloud_data.db` may appear as an untracked local runtime database.
-- The AI engine advertises `FastVLM-0.5B`, but current inference is heuristic until the real model is plugged in.
+- The AI engine is OpenRouter + OpenCV. Without `OPENROUTER_API_KEY`, prediction still works in OpenCV fallback mode but cloud VLM reasoning is disabled.
 - Invalid Android images currently fall back to mock AI output through the adapter; for production, invalid images should return a clear validation error.
 

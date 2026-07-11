@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Any, List, Optional
 
 class ReraProjectSchema(BaseModel):
     name: str
@@ -37,3 +37,4 @@ class ObservationResponse(BaseModel):
     development_score: float = 0.0
     summary: str = ""
     embedding: List[float] = Field(default_factory=list)
+    opencv_analysis: dict[str, Any] = Field(default_factory=dict)

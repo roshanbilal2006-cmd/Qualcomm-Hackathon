@@ -62,7 +62,7 @@ class CloudAdapter:
             "latitude": item.get("latitude"),
             "longitude": item.get("longitude"),
             "development_score": item.get("development_score", item.get("score", 0)),
-            "noise_db": item.get("noise_db", item.get("noise", 0.0)),
-            "dust_pm25": item.get("dust_pm25", item.get("dust", 0.0)),
+            "noise_db": item.get("noise_db", item.get("noise")),
+            "dust_pm25": item.get("dust_pm25", item.get("dust")),
             "stage": item.get("stage", item.get("construction_stage", "Unknown")),
         }

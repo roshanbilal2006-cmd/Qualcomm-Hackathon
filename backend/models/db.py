@@ -28,6 +28,7 @@ class DBObservation(DBModelBase):
     development_score = Column(Float, nullable=True)
     summary = Column(Text, nullable=True)
     embedding_json = Column(Text, default="[]")  # JSON list of float vector
+    opencv_analysis_json = Column(Text, default="{}")  # JSON visual metrics from local OpenCV pass
 
     @property
     def images(self):
@@ -52,6 +53,14 @@ class DBObservation(DBModelBase):
     @embedding.setter
     def embedding(self, value):
         self.embedding_json = json.dumps(value)
+
+    @property
+    def opencv_analysis(self):
+        return json.loads(self.opencv_analysis_json or "{}")
+
+    @opencv_analysis.setter
+    def opencv_analysis(self, value):
+        self.opencv_analysis_json = json.dumps(value or {})
 
 
 class DBReraProject(DBModelBase):

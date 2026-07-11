@@ -4,7 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
+    // secrets plugin removed — no Google Maps API key needed
 }
 
 android {
@@ -22,7 +22,7 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        manifestPlaceholders["MAPS_API_KEY"] = ""
+        // No Google Maps API key required — using OSMDroid (OpenStreetMap)
     }
 
     buildTypes {
@@ -53,6 +53,10 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    // Prevent Gradle from compressing .tflite model files (required for memory-mapping)
+    aaptOptions {
+        noCompress += "tflite"
+    }
 }
 
 dependencies {
@@ -67,6 +71,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.ui:ui-text-google-fonts:1.6.0")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     
@@ -88,9 +93,8 @@ dependencies {
     implementation("androidx.camera:camera-view:${cameraxVersion}")
     implementation("androidx.camera:camera-extensions:${cameraxVersion}")
 
-    // Google Maps
-    implementation("com.google.maps.android:maps-compose:4.3.0")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    // OSMDroid — OpenStreetMap (same map engine as the laptop web dashboard, no API key needed)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
     
     // Location
     implementation("com.google.android.gms:play-services-location:21.1.0")
@@ -112,6 +116,15 @@ dependencies {
 
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Room Database
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
+
+    // TensorFlow Lite (LiteRT) for on-device ML
+    implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

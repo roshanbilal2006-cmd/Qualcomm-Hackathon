@@ -1,4 +1,6 @@
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI, Depends, HTTPException, Query
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -33,8 +35,8 @@ def get_heatmap(rs: RetrievalService = Depends(get_retrieval_service)):
             longitude=obs.longitude,
             score=obs.development_score,
             construction_stage=obs.construction_stage,
-            dust=obs.dust_pm25 or 0.0,
-            noise=obs.noise_db or 0.0
+            dust=obs.dust_pm25,
+            noise=obs.noise_db
         ))
     return result
 
@@ -93,5 +95,6 @@ def chat_assistant(req: schemas.ChatRequest, rs: RetrievalService = Depends(get_
         raise HTTPException(status_code=503, detail="Service Unavailable: " + str(e))
 
 if __name__ == "__main__":
+    # pyrefly: ignore [missing-import]
     import uvicorn
     uvicorn.run("cloud.main:app", host="0.0.0.0", port=8003, reload=True)

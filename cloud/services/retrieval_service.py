@@ -62,7 +62,15 @@ class RetrievalService:
         return results
 
     def get_latest_sensor(self) -> Optional[models.Observation]:
-        return self.db.query(models.Observation).order_by(models.Observation.timestamp.desc()).first()
+        return (
+            self.db.query(models.Observation)
+            .filter(models.Observation.sensor_status == "connected")
+            .filter(models.Observation.noise_db.isnot(None))
+            .filter(models.Observation.dust_pm25.isnot(None))
+            .filter(models.Observation.dust_pm10.isnot(None))
+            .order_by(models.Observation.timestamp.desc())
+            .first()
+        )
 
     def get_stats(self) -> dict:
         total = self.db.query(models.Observation).count()

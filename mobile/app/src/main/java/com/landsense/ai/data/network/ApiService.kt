@@ -35,4 +35,8 @@ interface ApiService {
         @Query("longitude") longitude: Double,
         @Query("radius") radius: Double = 500.0
     ): List<HeatmapPoint>
+
+    // POST /chat — AI Assistant
+    @POST("chat")
+    suspend fun chat(@Body request: ChatRequest): ChatResponse
 }

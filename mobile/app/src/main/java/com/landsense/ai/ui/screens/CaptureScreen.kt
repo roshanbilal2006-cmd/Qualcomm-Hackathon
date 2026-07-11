@@ -156,17 +156,73 @@ fun CaptureScreen(
                         }
 
                         // Voice query button
+                        val speechLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                            contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+                        ) { result ->
+                            viewModel.setRecording(false)
+                            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                                val spokenText = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.get(0)
+                                if (!spokenText.isNullOrEmpty()) {
+                                    viewModel.setVoiceQuery(spokenText)
+                                }
+                            }
+                        }
+
                         OutlinedButton(
-                            onClick = { viewModel.setVoiceQuery("Check whether this construction site is active.") },
+                            onClick = {
+                                if (state.voiceQuery != null) {
+                                    viewModel.clearVoiceQuery()
+                                } else {
+                                    viewModel.setRecording(true)
+                                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Describe the construction site...")
+                                    }
+                                    try {
+                                        speechLauncher.launch(intent)
+                                    } catch (e: Exception) {
+                                        viewModel.setRecording(false)
+                                        viewModel.setVoiceQuery("Speech recognition not available")
+                                    }
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(
-                                if (state.voiceQuery != null) Icons.Default.CheckCircle else Icons.Default.Mic,
-                                contentDescription = null,
-                                tint = if (state.voiceQuery != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (state.voiceQuery == null) "Add Voice Query (Optional)" else "Voice Query Added ✓")
+                            if (state.isRecording) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Listening...")
+                            } else {
+                                Icon(
+                                    if (state.voiceQuery != null) Icons.Default.CheckCircle else Icons.Default.Mic,
+                                    contentDescription = null,
+                                    tint = if (state.voiceQuery != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = state.voiceQuery ?: "Add Voice Query (Optional)",
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        // Phase 11: Local AI prediction display
+                        state.localPrediction?.let { prediction ->
+                            Surface(
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Memory, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("On-device AI: $prediction", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                                }
+                            }
                         }
 
                         // Submit button

@@ -1,5 +1,10 @@
 package com.landsense.ai.ui.screens
 
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Point
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,15 +16,57 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.*
 import com.landsense.ai.data.network.HeatmapPoint
 import com.landsense.ai.presentation.heatmap.HeatmapViewModel
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Overlay
+
+// ─── Colour logic matching the laptop web dashboard ───────────────────────────
+// Web legend: Heavy Activity = red, Standard = orange, Completed = cyan
+private val ColourHeavy   = Color(0xFFE53935) // red
+private val ColourStandard = Color(0xFFFF9800) // orange
+private val ColourCompleted = Color(0xFF26C6DA) // cyan
+
+private fun pointColor(point: HeatmapPoint): Color = when {
+    point.stage?.lowercase()?.contains("complet") == true -> ColourCompleted
+    (point.developmentScore) >= 70 -> ColourHeavy
+    else -> ColourStandard
+}
+
+// ─── OSMDroid circle overlay ──────────────────────────────────────────────────
+private class CircleOverlay(
+    private val geoPoint: GeoPoint,
+    private val color: Int,
+    private val radiusPx: Float = 36f
+) : Overlay() {
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        this.color = (color and 0xFFFFFF) or 0x99000000.toInt()
+    }
+    private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        this.color = color
+    }
+
+    override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean) {
+        if (shadow) return
+        val screenPoint = Point()
+        mapView.projection.toPixels(geoPoint, screenPoint)
+        canvas.drawCircle(screenPoint.x.toFloat(), screenPoint.y.toFloat(), radiusPx, fillPaint)
+        canvas.drawCircle(screenPoint.x.toFloat(), screenPoint.y.toFloat(), radiusPx, strokePaint)
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +76,13 @@ fun HeatmapScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showMapView by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+
+    // Initialise OSMDroid configuration once
+    LaunchedEffect(Unit) {
+        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+        Configuration.getInstance().userAgentValue = "com.landsense.ai"
+    }
 
     Scaffold(
         topBar = {
@@ -36,12 +90,15 @@ fun HeatmapScreen(
                 title = { Text("Community Heatmap") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showMapView = !showMapView }) {
-                        Icon(if (showMapView) Icons.Default.List else Icons.Default.Map, contentDescription = "Toggle view")
+                        Icon(
+                            if (showMapView) Icons.Default.List else Icons.Default.Map,
+                            contentDescription = "Toggle view"
+                        )
                     }
                     IconButton(onClick = { viewModel.loadHeatmap() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
@@ -60,7 +117,9 @@ fun HeatmapScreen(
                     ) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Fetching heatmap from backend...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Fetching heatmap from backend...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 state.errorMessage != null -> {
@@ -68,10 +127,13 @@ fun HeatmapScreen(
                         modifier = Modifier.align(Alignment.Center).padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Default.WifiOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.WifiOff, null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text("Backend Offline", style = MaterialTheme.typography.titleMedium)
-                        Text(state.errorMessage!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(state.errorMessage!!, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedButton(onClick = { viewModel.loadHeatmap() }) { Text("Retry") }
                     }
@@ -81,29 +143,50 @@ fun HeatmapScreen(
                         modifier = Modifier.align(Alignment.Center).padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Default.MapOutlined, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Map, null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text("No observations yet", style = MaterialTheme.typography.titleMedium)
-                        Text("Submit scans to see them appear on the heatmap.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Submit scans to see them appear on the heatmap.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                showMapView -> HeatmapMapView(points = state.points)
+                showMapView -> OsmHeatmapMap(points = state.points)
                 else -> HeatmapListView(points = state.points)
             }
 
-            // Point count chip
-            if (!state.isLoading && state.points.isNotEmpty()) {
+            // Legend + Filter chips at the top
+            if (!state.isLoading && state.allPoints.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.align(Alignment.TopCenter).padding(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                    shape = MaterialTheme.shapes.medium
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    shape = MaterialTheme.shapes.medium,
+                    tonalElevation = 6.dp
                 ) {
-                    Text(
-                        "${state.points.size} observation${if (state.points.size != 1) "s" else ""} — tap icon to toggle view",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)) {
+                        androidx.compose.foundation.lazy.LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            item { FilterChipUI("All", state.selectedFilter == com.landsense.ai.presentation.heatmap.HeatmapFilter.ALL) { viewModel.setFilter(com.landsense.ai.presentation.heatmap.HeatmapFilter.ALL) } }
+                            item { FilterChipUI("Heavy", state.selectedFilter == com.landsense.ai.presentation.heatmap.HeatmapFilter.HEAVY) { viewModel.setFilter(com.landsense.ai.presentation.heatmap.HeatmapFilter.HEAVY) } }
+                            item { FilterChipUI("Standard", state.selectedFilter == com.landsense.ai.presentation.heatmap.HeatmapFilter.STANDARD) { viewModel.setFilter(com.landsense.ai.presentation.heatmap.HeatmapFilter.STANDARD) } }
+                            item { FilterChipUI("Completed", state.selectedFilter == com.landsense.ai.presentation.heatmap.HeatmapFilter.COMPLETED) { viewModel.setFilter(com.landsense.ai.presentation.heatmap.HeatmapFilter.COMPLETED) } }
+                        }
+                    }
+                }
+            }
+
+            // My Location FAB (mock location logic for hackathon)
+            if (showMapView && !state.isLoading && state.points.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = { /* In a real app, request location and center map. For demo, we just toast or re-center to first point. */ },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp),
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.MyLocation, contentDescription = "My Location")
                 }
             }
         }
@@ -111,49 +194,87 @@ fun HeatmapScreen(
 }
 
 @Composable
-private fun HeatmapMapView(points: List<HeatmapPoint>) {
-    val firstPoint = points.firstOrNull()
-    val centerLat = firstPoint?.latitude ?: 12.9716
-    val centerLng = firstPoint?.longitude ?: 77.7500
+private fun FilterChipUI(label: String, isSelected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = isSelected,
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        border = FilterChipDefaults.filterChipBorder(enabled = true, selected = isSelected)
+    )
+}
 
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(LatLng(centerLat, centerLng), 12f)
+@Composable
+private fun LegendDot(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .background(color, MaterialTheme.shapes.small)
+        )
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
     }
+}
 
-    GoogleMap(
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState,
-        properties = MapProperties(mapType = MapType.NORMAL),
-        uiSettings = MapUiSettings(zoomControlsEnabled = true)
-    ) {
-        points.forEach { point ->
-            val hue = scoreToHue(point.developmentScore)
-            Marker(
-                state = MarkerState(position = LatLng(point.latitude, point.longitude)),
-                title = point.stage ?: "Unknown Stage",
-                snippet = buildString {
-                    append("Score: ${point.developmentScore.toInt()}")
-                    point.noiseDb?.let { append(" | Noise: ${it.toInt()}dB") }
-                    point.dustPm25?.let { append(" | PM2.5: ${it.toInt()}") }
-                },
-                icon = BitmapDescriptorFactory.defaultMarker(hue)
-            )
-        }
-    }
+@Composable
+private fun OsmHeatmapMap(points: List<HeatmapPoint>) {
+    val center = GeoPoint(points.first().latitude, points.first().longitude)
+
+    AndroidView(
+        factory = { ctx ->
+            MapView(ctx).apply {
+                setTileSource(TileSourceFactory.MAPNIK)     // same OSM tiles as web dashboard
+                setMultiTouchControls(true)
+                controller.setZoom(12.0)
+                controller.setCenter(center)
+                setBuiltInZoomControls(true)
+
+                // Add circle overlay for each point
+                points.forEach { pt ->
+                    val geoPoint = GeoPoint(pt.latitude, pt.longitude)
+                    val color = pointColor(pt).toArgb()
+
+                    // Filled circle (same style as web dashboard)
+                    overlays.add(CircleOverlay(geoPoint, color))
+
+                    // Tap-friendly marker with info
+                    val marker = Marker(this).apply {
+                        position = geoPoint
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        title = pt.stage ?: "Unknown Stage"
+                        snippet = buildString {
+                            append("Score: ${pt.developmentScore.toInt()}")
+                            pt.noiseDb?.let { append(" | Noise: ${it.toInt()} dB") }
+                            pt.dustPm25?.let { append(" | PM2.5: ${it.toInt()} µg/m³") }
+                        }
+                        icon = null  // invisible — circle overlay is the visual
+                    }
+                    overlays.add(marker)
+                }
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 @Composable
 private fun HeatmapListView(points: List<HeatmapPoint>) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 56.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            Text("${points.size} Community Observations", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${points.size} Community Observations",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(4.dp))
         }
         items(points) { point ->
+            val color = pointColor(point)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -165,12 +286,20 @@ private fun HeatmapListView(points: List<HeatmapPoint>) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(point.stage ?: "Unknown Stage", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                        Text("%.4f, %.4f".format(point.latitude, point.longitude), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        point.noiseDb?.let { Text("Noise: ${it.toInt()} dB", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Text(point.stage ?: "Unknown Stage",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium)
+                        Text("%.4f, %.4f".format(point.latitude, point.longitude),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        point.noiseDb?.let {
+                            Text("Noise: ${it.toInt()} dB",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                     Surface(
-                        color = scoreColor(point.developmentScore).copy(alpha = 0.2f),
+                        color = color.copy(alpha = 0.18f),
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(
@@ -178,25 +307,11 @@ private fun HeatmapListView(points: List<HeatmapPoint>) {
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = scoreColor(point.developmentScore)
+                            color = color
                         )
                     }
                 }
             }
         }
-    }
-}
-
-private fun scoreToHue(score: Double): Float {
-    // Green (high score) → Yellow → Red (low score)
-    return (score / 100.0 * 120.0).toFloat().coerceIn(0f, 120f)
-}
-
-@Composable
-private fun scoreColor(score: Double): Color {
-    return when {
-        score >= 70 -> Color(0xFF4CAF50)
-        score >= 40 -> Color(0xFFFF9800)
-        else -> Color(0xFFF44336)
     }
 }
