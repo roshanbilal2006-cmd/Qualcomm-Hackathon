@@ -1,8 +1,11 @@
 import logging
 
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
+
+load_dotenv()
 
 try:
     from ai.engine import ImageDecodeError, VisionInferenceEngine
