@@ -20,6 +20,7 @@ fun HomeScreen(
     onNavigateToHistory: () -> Unit,
     onNavigateToHeatmap: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToChat: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -57,6 +58,24 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
+            // Network offline banner
+            if (!state.isNetworkAvailable) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.WifiOff, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("No internet connection. Scans will be saved offline.", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+
             // Backend status indicator
             BackendStatusChip(isOnline = state.isBackendOnline)
 
@@ -76,26 +95,12 @@ fun HomeScreen(
                 onClick = onNavigateToHistory
             )
 
-            // Chatbot placeholder
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.SmartToy,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text("Construction Assistant", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                        Text("Powered by Cloud AI — Coming Soon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                    }
-                }
-            }
+            HomeCard(
+                title = "Construction Assistant",
+                subtitle = "Powered by Cloud AI",
+                icon = Icons.Default.SmartToy,
+                onClick = onNavigateToChat
+            )
         }
     }
 }

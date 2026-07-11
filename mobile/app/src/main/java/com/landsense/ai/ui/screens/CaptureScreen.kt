@@ -207,6 +207,24 @@ fun CaptureScreen(
                             }
                         }
 
+                        // Phase 11: Local AI prediction display
+                        state.localPrediction?.let { prediction ->
+                            Surface(
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Memory, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("On-device AI: $prediction", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                                }
+                            }
+                        }
+
                         // Submit button
                         Button(
                             onClick = { viewModel.submitObservation() },

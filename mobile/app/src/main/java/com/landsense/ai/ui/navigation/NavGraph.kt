@@ -13,6 +13,7 @@ sealed class Screen(val route: String) {
     object Heatmap : Screen("heatmap")
     object History : Screen("history")
     object Settings : Screen("settings")
+    object Chat : Screen("chat")
     object Result : Screen("result/{observationId}") {
         fun createRoute(observationId: String) = "result/$observationId"
     }
@@ -29,7 +30,8 @@ fun AppNavGraph() {
                 onNavigateToCapture = { navController.navigate(Screen.Capture.route) },
                 onNavigateToHistory = { navController.navigate(Screen.History.route) },
                 onNavigateToHeatmap = { navController.navigate(Screen.Heatmap.route) },
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                onNavigateToChat = { navController.navigate(Screen.Chat.route) }
             )
         }
 
@@ -75,6 +77,10 @@ fun AppNavGraph() {
 
         composable(Screen.Settings.route) {
             SettingsScreen(onNavigateUp = { navController.popBackStack() })
+        }
+
+        composable(Screen.Chat.route) {
+            ChatScreen(onNavigateUp = { navController.popBackStack() })
         }
     }
 }

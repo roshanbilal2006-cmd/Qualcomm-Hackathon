@@ -53,6 +53,10 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    // Prevent Gradle from compressing .tflite model files (required for memory-mapping)
+    aaptOptions {
+        noCompress += "tflite"
+    }
 }
 
 dependencies {
@@ -117,6 +121,9 @@ dependencies {
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     kapt("androidx.room:room-compiler:$roomVersion")
+
+    // TensorFlow Lite (LiteRT) for on-device ML
+    implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

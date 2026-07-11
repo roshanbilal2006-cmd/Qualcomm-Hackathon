@@ -15,6 +15,7 @@ import com.landsense.ai.data.network.ObservationRequest
 import com.landsense.ai.data.repository.ObservationRepository
 import com.landsense.ai.data.repository.SettingsRepository
 import com.landsense.ai.util.LocationTracker
+import com.landsense.ai.util.OnDeviceClassifier
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,8 @@ data class CaptureState(
     val voiceQuery: String? = null,
     val isRecording: Boolean = false,
     val location: Location? = null,
-    val uploadStatusText: String? = null
+    val uploadStatusText: String? = null,
+    val localPrediction: String? = null             // Phase 11: LiteRT inference result
 )
 
 private const val MAX_IMAGES = 4
@@ -52,7 +54,8 @@ class CaptureViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: ObservationRepository,
     private val locationTracker: LocationTracker,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val onDeviceClassifier: OnDeviceClassifier
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CaptureState())
@@ -70,15 +73,20 @@ class CaptureViewModel @Inject constructor(
                 override fun onCaptureSuccess(image: ImageProxy) {
                     viewModelScope.launch(Dispatchers.Default) {
                         try {
-                            val jpegBytes = imageProxyToCompressedJpeg(image)
+                            val (jpegBytes, bitmap) = imageProxyToCompressedJpegAndBitmap(image)
                             image.close()
+                            
+                            // Phase 11: Run local AI inference
+                            val prediction = onDeviceClassifier.classifyImage(bitmap)
+
                             val base64 = Base64.encodeToString(jpegBytes, Base64.NO_WRAP)
                             val dataUri = "data:image/jpeg;base64,$base64"
                             _state.update { current ->
                                 current.copy(
                                     images = current.images + dataUri,
                                     imageThumbnails = current.imageThumbnails + jpegBytes,
-                                    isCapturing = false
+                                    isCapturing = false,
+                                    localPrediction = prediction
                                 )
                             }
                         } catch (e: Exception) {
@@ -170,16 +178,16 @@ class CaptureViewModel @Inject constructor(
     }
 
     /**
-     * Converts an ImageProxy to a properly compressed, resized JPEG byte array.
+     * Converts an ImageProxy to a properly compressed, resized JPEG byte array
+     * AND returns the Bitmap for on-device ML inference.
      *
-     * The previous implementation just read raw plane bytes which produced corrupt/unreadable
-     * images. This version:
      * 1. Decodes the image planes into a Bitmap
      * 2. Applies rotation correction from EXIF data
      * 3. Resizes so the longest side is max 1024px
      * 4. Compresses to JPEG at quality 80
+     * 5. Returns both the JPEG bytes and the processed Bitmap
      */
-    private suspend fun imageProxyToCompressedJpeg(image: ImageProxy): ByteArray =
+    private suspend fun imageProxyToCompressedJpegAndBitmap(image: ImageProxy): Pair<ByteArray, Bitmap> =
         withContext(Dispatchers.Default) {
             // Step 1: Convert ImageProxy planes to a Bitmap
             val buffer = image.planes[0].buffer
@@ -188,10 +196,7 @@ class CaptureViewModel @Inject constructor(
 
             var bitmap = BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size)
 
-            // If BitmapFactory can't decode (e.g. YUV format), fall back to NV21 → JPEG approach
             if (bitmap == null) {
-                // For YUV_420_888 format, use the JPEG output directly from planes
-                // This typically happens with camera2 — CameraX usually provides JPEG
                 throw IllegalStateException("Failed to decode captured image. Ensure CameraX is configured for JPEG output.")
             }
 
@@ -216,7 +221,7 @@ class CaptureViewModel @Inject constructor(
             // Step 4: Compress to JPEG
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, outputStream)
-            outputStream.toByteArray()
+            Pair(outputStream.toByteArray(), bitmap)
         }
 
     override fun onCleared() {

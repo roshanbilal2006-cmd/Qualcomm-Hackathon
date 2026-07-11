@@ -78,3 +78,18 @@ data class HealthResponse(
     val device: String = "",
     val role: String = ""
 )
+
+// ─────────────────────────────────────────────
+//  CHAT — POST /chat
+// ─────────────────────────────────────────────
+@Serializable
+data class ChatRequest(
+    val question: String,
+    val latitude: Double,
+    val longitude: Double
+)
+
+@Serializable
+data class ChatResponse(
+    val answer: String
+)
