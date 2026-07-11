@@ -157,27 +157,54 @@ fun HeatmapScreen(
                 else -> HeatmapListView(points = state.points)
             }
 
-            // Legend + count chip at the top — matches web dashboard
-            if (!state.isLoading && state.points.isNotEmpty()) {
+            // Legend + Filter chips at the top
+            if (!state.isLoading && state.allPoints.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.align(Alignment.TopCenter).padding(8.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
                     shape = MaterialTheme.shapes.medium,
-                    tonalElevation = 4.dp
+                    tonalElevation = 6.dp
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        LegendDot(ColourHeavy, "Heavy Activity")
-                        LegendDot(ColourStandard, "Standard")
-                        LegendDot(ColourCompleted, "Completed")
+                    Column(modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)) {
+                        androidx.compose.foundation.lazy.LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            item { FilterChipUI("All", state.selectedFilter == com.landsense.ai.presentation.heatmap.HeatmapFilter.ALL) { viewModel.setFilter(com.landsense.ai.presentation.heatmap.HeatmapFilter.ALL) } }
+                            item { FilterChipUI("Heavy", state.selectedFilter == com.landsense.ai.presentation.heatmap.HeatmapFilter.HEAVY) { viewModel.setFilter(com.landsense.ai.presentation.heatmap.HeatmapFilter.HEAVY) } }
+                            item { FilterChipUI("Standard", state.selectedFilter == com.landsense.ai.presentation.heatmap.HeatmapFilter.STANDARD) { viewModel.setFilter(com.landsense.ai.presentation.heatmap.HeatmapFilter.STANDARD) } }
+                            item { FilterChipUI("Completed", state.selectedFilter == com.landsense.ai.presentation.heatmap.HeatmapFilter.COMPLETED) { viewModel.setFilter(com.landsense.ai.presentation.heatmap.HeatmapFilter.COMPLETED) } }
+                        }
                     }
+                }
+            }
+
+            // My Location FAB (mock location logic for hackathon)
+            if (showMapView && !state.isLoading && state.points.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = { /* In a real app, request location and center map. For demo, we just toast or re-center to first point. */ },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp),
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.MyLocation, contentDescription = "My Location")
                 }
             }
         }
     }
+}
+
+@Composable
+private fun FilterChipUI(label: String, isSelected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = isSelected,
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        border = FilterChipDefaults.filterChipBorder(enabled = true, selected = isSelected)
+    )
 }
 
 @Composable

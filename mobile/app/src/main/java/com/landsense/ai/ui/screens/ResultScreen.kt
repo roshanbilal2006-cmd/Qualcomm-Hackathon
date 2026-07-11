@@ -1,5 +1,7 @@
 package com.landsense.ai.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -9,12 +11,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.landsense.ai.data.network.ObservationResponse
 import com.landsense.ai.data.network.ReraProject
 import com.landsense.ai.presentation.result.ResultViewModel
+import android.content.Intent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,6 +29,7 @@ fun ResultScreen(
     viewModel: ResultViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(observationId) {
         viewModel.loadObservation(observationId)
@@ -33,7 +39,22 @@ fun ResultScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Analysis Report") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                actions = {
+                    if (state.observation != null) {
+                        IconButton(onClick = {
+                            val obs = state.observation!!
+                            val shareText = "LandSense AI Report\nStage: ${obs.constructionStage}\nScore: ${obs.developmentScore.toInt()}/100\nLocation: ${obs.latitude}, ${obs.longitude}\nSummary: ${obs.summary}"
+                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Share Report"))
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share")
+                        }
+                    }
+                }
             )
         },
         bottomBar = {
@@ -91,15 +112,23 @@ private fun ObservationReport(obs: ObservationResponse) {
             )
         }
 
-        // Confidence + Development Score row
+        // Animated Scores
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(modifier = Modifier.weight(1f)) {
-                    ReportCard("AI Confidence", obs.confidence?.let { "${(it * 100).toInt()}%" } ?: "—")
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    ReportCard("Dev Score", "${obs.developmentScore.toInt()}/100")
-                }
+                AnimatedScoreCard(
+                    modifier = Modifier.weight(1f),
+                    title = "AI Confidence",
+                    score = obs.confidence?.let { it.toFloat() } ?: 0f,
+                    valueText = obs.confidence?.let { "${(it * 100).toInt()}%" } ?: "—",
+                    color = Color(0xFF4CAF50)
+                )
+                AnimatedScoreCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Dev Score",
+                    score = (obs.developmentScore / 100).toFloat(),
+                    valueText = "${obs.developmentScore.toInt()}/100",
+                    color = Color(0xFF3253AC)
+                )
             }
         }
 
@@ -284,6 +313,43 @@ fun ReportCard(title: String, value: String, subtitle: String? = null, highlight
             )
             if (subtitle != null) {
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+fun AnimatedScoreCard(modifier: Modifier = Modifier, title: String, score: Float, valueText: String, color: Color) {
+    var startAnimation by remember { mutableStateOf(false) }
+    val animatedScore by animateFloatAsState(
+        targetValue = if (startAnimation) score else 0f,
+        animationSpec = tween(durationMillis = 1500),
+        label = "score_anim"
+    )
+
+    LaunchedEffect(Unit) {
+        startAnimation = true
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(72.dp)) {
+                CircularProgressIndicator(
+                    progress = { animatedScore },
+                    color = color,
+                    trackColor = color.copy(alpha = 0.15f),
+                    strokeWidth = 6.dp,
+                    strokeCap = StrokeCap.Round,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Text(valueText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
