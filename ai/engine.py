@@ -8,13 +8,17 @@ import re
 import time
 from dataclasses import dataclass
 from io import BytesIO
-from pathlib import Path
 from statistics import mean
 from typing import Iterable
 
 import cv2
 import numpy as np
 from PIL import Image, ImageStat, UnidentifiedImageError
+
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # pragma: no cover - dotenv is optional at runtime
+    load_dotenv = None
 
 logger = logging.getLogger("landsense.ai.engine")
 
@@ -54,32 +58,34 @@ class ImageDecodeError(ValueError):
 
 class VisionInferenceEngine:
     """
-    Contract-stable Qualcomm VLM engine boundary.
+    Contract-stable OpenRouter + OpenCV vision engine boundary.
 
-    In the hackathon demo this runs deterministic visual checks locally so
-    random non-site images are not described as construction. The same API can
-    be backed by Qualcomm AI Hub / FastVLM on-device inference without changing
-    the backend adapter.
+    OpenCV extracts deterministic scene metrics for validation and embeddings.
+    OpenRouter is the primary VLM path when OPENROUTER_API_KEY is configured;
+    if the key or API is unavailable, the service falls back to OpenCV-only
+    stage estimation while preserving the same backend contract.
     """
 
-    def __init__(self, model_name: str = "FastVLM-0.5B", embedding_size: int = 128):
+    def __init__(self, model_name: str = "OpenRouter+OpenCV", embedding_size: int = 128):
+        if load_dotenv:
+            load_dotenv()
+
         started = time.perf_counter()
         self.model_name = model_name
         self.embedding_size = embedding_size
-        self.device = "Snapdragon NPU"
-        self.model_dir = Path(os.getenv("LANDSENSE_VLM_MODEL_DIR", "ai/models/fastvlm"))
-        self.model_artifacts = self._discover_model_artifacts(self.model_dir)
-        self.transformers_model_dir = self._discover_transformers_checkpoint(self.model_dir)
-        self._tokenizer = None
-        self._model = None
-        self._model_load_error = None
-        if self.transformers_model_dir:
-            self.runtime_backend = "FastVLM Transformers checkpoint"
-            self.device = "CUDA GPU" if os.getenv("CUDA_VISIBLE_DEVICES") else "CPU/GPU auto"
-        elif self.model_artifacts:
-            self.runtime_backend = "Qualcomm LiteRT/QNN model artifacts detected"
+        self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+        self.openrouter_base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        self.openrouter_vision_model = os.getenv("OPENROUTER_VISION_MODEL", "openai/gpt-5.6-luna")
+        self.openrouter_referer = os.getenv("OPENROUTER_HTTP_REFERER")
+        self.openrouter_title = os.getenv("OPENROUTER_APP_TITLE", "LandSense")
+        self._openrouter_client = None
+        self._openrouter_error = None
+        if self.openrouter_api_key:
+            self.runtime_backend = f"OpenRouter vision + OpenCV ({self.openrouter_vision_model})"
+            self.device = "OpenRouter cloud VLM + local OpenCV"
         else:
-            self.runtime_backend = "local visual triage"
+            self.runtime_backend = "OpenCV fallback (OPENROUTER_API_KEY missing)"
+            self.device = "local OpenCV"
         self.loaded = True
         self.load_time_ms = round((time.perf_counter() - started) * 1000, 2)
         logger.info(
@@ -88,35 +94,6 @@ class VisionInferenceEngine:
             self.runtime_backend,
             self.load_time_ms,
         )
-
-    def _discover_model_artifacts(self, model_dir: Path) -> list[str]:
-        if not model_dir.exists() or not model_dir.is_dir():
-            return []
-
-        supported_suffixes = {".litertlm", ".tflite", ".onnx", ".so", ".model"}
-        return [
-            str(path)
-            for path in model_dir.rglob("*")
-            if path.is_file()
-            and ".cache" not in path.parts
-            and path.suffix.lower() in supported_suffixes
-        ]
-
-    def _discover_transformers_checkpoint(self, model_dir: Path) -> Path | None:
-        if not model_dir.exists() or not model_dir.is_dir():
-            return None
-
-        candidates = []
-        if (model_dir / "config.json").exists():
-            candidates.append(model_dir)
-        candidates.extend(path.parent for path in model_dir.rglob("config.json") if ".cache" not in path.parts)
-
-        for candidate in candidates:
-            has_config = (candidate / "config.json").exists()
-            has_weights = (candidate / "model.safetensors").exists() or any(candidate.glob("pytorch_model*.bin"))
-            if has_config and has_weights:
-                return candidate
-        return None
 
     def predict(self, images: list[str]) -> dict:
         started = time.perf_counter()
@@ -129,12 +106,13 @@ class VisionInferenceEngine:
 
         stage, progress = self._estimate_stage(combined)
         confidence = self._estimate_confidence(combined, len(decoded))
-        vlm_result = self._predict_with_fastvlm(decoded[0], stage, progress, confidence) if self.transformers_model_dir else None
+        vlm_result = self._predict_with_openrouter(decoded, combined, stage, progress, confidence)
+        inference_source = "openrouter" if vlm_result else "opencv_fallback"
         if vlm_result:
             stage = vlm_result.get("construction_stage", stage)
             progress = vlm_result.get("progress_percentage", progress)
             confidence = vlm_result.get("confidence", confidence)
-        description = self._describe(stage, progress, combined, vlm_result)
+        description = self._describe(stage, progress, combined, vlm_result, inference_source)
         embedding = self._build_embedding(decoded, combined)
 
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
@@ -154,113 +132,118 @@ class VisionInferenceEngine:
             "model": self.model_name,
             "device": self.device,
             "runtime_backend": self.runtime_backend,
-            "model_artifacts_loaded": bool(self.transformers_model_dir or self.model_artifacts),
-            "model_load_error": self._model_load_error,
+            "ai_backend": "openrouter_opencv",
+            "inference_source": inference_source,
+            "model_artifacts_loaded": False,
+            "model_load_error": None,
+            "openrouter_enabled": bool(self.openrouter_api_key),
+            "openrouter_model": self.openrouter_vision_model if self.openrouter_api_key else None,
+            "openrouter_error": self._openrouter_error,
             "image_count": len(decoded),
             "site_likelihood": round(combined.construction_likelihood, 2),
             "opencv_analysis": self._analysis_payload(combined),
         }
 
-    def _load_fastvlm(self) -> bool:
-        if self._model is not None and self._tokenizer is not None:
-            return True
-        if self._model_load_error:
-            return False
-        if not self.transformers_model_dir:
-            return False
+    def _get_openrouter_client(self):
+        if self._openrouter_client is not None:
+            return self._openrouter_client
+        if not self.openrouter_api_key:
+            return None
 
         try:
-            modules_cache = self.model_dir / ".hf_modules_cache"
-            modules_cache.mkdir(parents=True, exist_ok=True)
-            os.environ.setdefault("HF_MODULES_CACHE", str(modules_cache.resolve()))
+            from openai import OpenAI
 
-            import torch
-            from transformers import AutoModelForCausalLM, AutoTokenizer
-
-            dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                self.transformers_model_dir,
-                trust_remote_code=True,
-                local_files_only=True,
+            headers = {"X-Title": self.openrouter_title}
+            if self.openrouter_referer:
+                headers["HTTP-Referer"] = self.openrouter_referer
+            self._openrouter_client = OpenAI(
+                base_url=self.openrouter_base_url,
+                api_key=self.openrouter_api_key,
+                default_headers=headers,
             )
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.transformers_model_dir,
-                torch_dtype=dtype,
-                device_map="auto",
-                trust_remote_code=True,
-                local_files_only=True,
-            )
-            self._model.eval()
-            return True
+            return self._openrouter_client
         except Exception as exc:
-            self._model_load_error = str(exc)
-            logger.exception("FastVLM checkpoint could not be loaded")
-            return False
+            self._openrouter_error = str(exc)
+            logger.exception("OpenRouter client could not be initialized")
+            return None
 
-    def _predict_with_fastvlm(
+    def _predict_with_openrouter(
         self,
-        image: Image.Image,
+        images: list[Image.Image],
+        features: ImageFeatures,
         fallback_stage: str,
         fallback_progress: int,
         fallback_confidence: float,
     ) -> dict | None:
-        if not self._load_fastvlm():
+        client = self._get_openrouter_client()
+        if client is None:
             return None
+
+        prompt = (
+            "Analyze these land or construction-site images for LandSense. "
+            "Return only compact JSON with keys construction_stage, progress_percentage, confidence, description. "
+            f"Allowed construction_stage values: {', '.join(ALLOWED_STAGES)}. "
+            "Use Unknown and 0 progress when the images do not show a construction site. "
+            "Keep confidence between 0 and 1. "
+            "Local CV guardrail metrics are: "
+            f"site_likelihood={features.construction_likelihood:.2f}, "
+            f"concrete={features.concrete_fraction:.2f}, earth={features.earth_fraction:.2f}, "
+            f"equipment_cue={self._effective_equipment_signal(features):.2f}, "
+            f"line_density={features.line_density:.2f}. "
+            f"Fallback estimate: stage={fallback_stage}, progress={fallback_progress}, confidence={fallback_confidence:.2f}."
+        )
+        content = [{"type": "text", "text": prompt}]
+        content.extend(
+            {"type": "image_url", "image_url": {"url": self._image_to_data_url(image)}}
+            for image in images[:4]
+        )
 
         try:
-            import torch
-
-            prompt = (
-                "<image>\n"
-                "Analyze this land or construction-site image. Return only compact JSON with keys: "
-                "construction_stage, progress_percentage, confidence, description. "
-                f"Allowed construction_stage values: {', '.join(ALLOWED_STAGES)}. "
-                "Use Unknown and 0 progress if the image is not a construction site."
+            response = client.chat.completions.create(
+                model=self.openrouter_vision_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a precise construction progress vision analyst. Output valid JSON only.",
+                    },
+                    {"role": "user", "content": content},
+                ],
+                temperature=0.0,
+                max_tokens=220,
+                response_format={"type": "json_object"},
             )
-            messages = [{"role": "user", "content": prompt}]
-            rendered = self._tokenizer.apply_chat_template(
-                messages,
-                add_generation_prompt=True,
-                tokenize=False,
-            )
-            pre, post = rendered.split("<image>", 1)
-            pre_ids = self._tokenizer(pre, return_tensors="pt", add_special_tokens=False).input_ids
-            post_ids = self._tokenizer(post, return_tensors="pt", add_special_tokens=False).input_ids
-            img_tok = torch.tensor([[-200]], dtype=pre_ids.dtype)
-            input_ids = torch.cat([pre_ids, img_tok, post_ids], dim=1).to(self._model.device)
-            attention_mask = torch.ones_like(input_ids, device=self._model.device)
-
-            pixel_values = self._model.get_vision_tower().image_processor(
-                images=image.convert("RGB"),
-                return_tensors="pt",
-            )["pixel_values"]
-            pixel_values = pixel_values.to(self._model.device, dtype=self._model.dtype)
-
-            with torch.no_grad():
-                output = self._model.generate(
-                    inputs=input_ids,
-                    attention_mask=attention_mask,
-                    images=pixel_values,
-                    max_new_tokens=160,
-                    do_sample=False,
-                )
-
-            generated = self._tokenizer.decode(output[0][input_ids.shape[1]:], skip_special_tokens=True)
-            parsed = self._parse_fastvlm_json(generated)
+            text = self._message_content_to_text(response.choices[0].message.content)
+            parsed = self._parse_vlm_json(text)
             if not parsed:
-                return {
-                    "construction_stage": fallback_stage,
-                    "progress_percentage": fallback_progress,
-                    "confidence": fallback_confidence,
-                    "description": self._clean_vlm_text(generated),
-                }
+                self._openrouter_error = "OpenRouter returned unparsable JSON"
+                return None
+            self._openrouter_error = None
             return parsed
         except Exception as exc:
-            self._model_load_error = str(exc)
-            logger.exception("FastVLM inference failed")
+            self._openrouter_error = str(exc)
+            logger.exception("OpenRouter vision inference failed; falling back to local analysis")
             return None
 
-    def _parse_fastvlm_json(self, text: str) -> dict | None:
+    def _image_to_data_url(self, image: Image.Image) -> str:
+        buffer = BytesIO()
+        image.convert("RGB").save(buffer, format="JPEG", quality=85, optimize=True)
+        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+        return f"data:image/jpeg;base64,{encoded}"
+
+    def _message_content_to_text(self, content) -> str:
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for part in content:
+                if isinstance(part, dict) and part.get("type") == "text":
+                    parts.append(str(part.get("text", "")))
+                elif hasattr(part, "text"):
+                    parts.append(str(part.text))
+            return "\n".join(parts)
+        return str(content or "")
+
+    def _parse_vlm_json(self, text: str) -> dict | None:
         decoder = json.JSONDecoder()
         data = None
         for match in re.finditer(r"\{", text):
@@ -304,7 +287,7 @@ class VisionInferenceEngine:
         cleaned = re.sub(r'^[\s,"\':;.-]+', "", cleaned)
         if len(cleaned) > 360:
             cleaned = cleaned[:357].rsplit(" ", 1)[0].rstrip(".,;:") + "..."
-        return cleaned or "FastVLM reviewed the uploaded image."
+        return cleaned or "OpenRouter reviewed the uploaded image."
 
     def _decode_image(self, image_ref: str) -> Image.Image:
         try:
@@ -574,21 +557,28 @@ class VisionInferenceEngine:
         confidence = max(0.55, min(0.96, clarity + multi_view_bonus + site_bonus))
         return round(confidence, 2)
 
-    def _describe(self, stage: str, progress: int, features: ImageFeatures, vlm_result: dict | None = None) -> str:
+    def _describe(
+        self,
+        stage: str,
+        progress: int,
+        features: ImageFeatures,
+        vlm_result: dict | None = None,
+        inference_source: str = "opencv_fallback",
+    ) -> str:
         equipment_cue = self._effective_equipment_signal(features)
         if vlm_result:
-            vlm_description = vlm_result.get("description") or "FastVLM returned a construction-stage assessment."
+            vlm_description = vlm_result.get("description") or "OpenRouter returned a construction-stage assessment."
             return (
-                f"{stage} is estimated at {progress}% progress using FastVLM-0.5B Transformers inference. "
+                f"{stage} is estimated at {progress}% progress using OpenRouter vision with OpenCV guardrails. "
                 f"{vlm_description} "
-                f"Visual guardrail metrics: site-likelihood={features.construction_likelihood:.2f}, "
+                f"OpenCV metrics: site-likelihood={features.construction_likelihood:.2f}, "
                 f"concrete={features.concrete_fraction:.2f}, earth={features.earth_fraction:.2f}, "
                 f"equipment-cue={equipment_cue:.2f}, lines={features.line_density:.2f}."
             )
 
         if stage == "Unknown":
             return (
-                "Visual analysis did not find reliable construction-site evidence in the submitted photo set. "
+                "OpenCV analysis did not find reliable construction-site evidence in the submitted photo set. "
                 f"Site-likelihood={features.construction_likelihood:.2f}; "
                 f"concrete={features.concrete_fraction:.2f}, earth={features.earth_fraction:.2f}, "
                 f"equipment-cue={equipment_cue:.2f}, lines={features.line_density:.2f}. "
@@ -596,18 +586,12 @@ class VisionInferenceEngine:
             )
 
         activity = "active construction cues" if features.line_density > 0.16 or features.edge_density > 0.12 else "limited visible activity"
-        if not self.model_artifacts:
-            return (
-                f"{stage} is estimated at {progress}% progress by local visual analysis. "
-                "FastVLM inference will be used after the model checkpoint finishes downloading. "
-                f"The image set shows {activity}; site-likelihood={features.construction_likelihood:.2f}, "
-                f"concrete={features.concrete_fraction:.2f}, earth={features.earth_fraction:.2f}, "
-                f"equipment-cue={equipment_cue:.2f}, lines={features.line_density:.2f}."
-            )
-
         return (
-            f"{stage} is estimated at {progress}% progress using Qualcomm FastVLM LiteRT/QNN inference. "
-            f"The image set shows {activity} with site-likelihood {features.construction_likelihood:.2f}."
+            f"{stage} is estimated at {progress}% progress by OpenCV fallback analysis. "
+            f"OpenRouter was not used for this request ({inference_source}); the image set shows {activity}. "
+            f"OpenCV metrics: site-likelihood={features.construction_likelihood:.2f}, "
+            f"concrete={features.concrete_fraction:.2f}, earth={features.earth_fraction:.2f}, "
+            f"equipment-cue={equipment_cue:.2f}, lines={features.line_density:.2f}."
         )
 
     def _analysis_payload(self, features: ImageFeatures) -> dict[str, float]:

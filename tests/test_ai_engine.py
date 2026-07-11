@@ -6,6 +6,42 @@ from PIL import Image, ImageDraw
 from ai.engine import VisionInferenceEngine
 
 
+class FakeMessage:
+    def __init__(self, content: str):
+        self.content = content
+
+
+class FakeChoice:
+    def __init__(self, content: str):
+        self.message = FakeMessage(content)
+
+
+class FakeResponse:
+    def __init__(self, content: str):
+        self.choices = [FakeChoice(content)]
+
+
+class FakeCompletions:
+    def __init__(self, content: str):
+        self.content = content
+        self.last_kwargs = None
+
+    def create(self, **kwargs):
+        self.last_kwargs = kwargs
+        return FakeResponse(self.content)
+
+
+class FakeChat:
+    def __init__(self, completions: FakeCompletions):
+        self.completions = completions
+
+
+class FakeOpenRouterClient:
+    def __init__(self, content: str):
+        self.completions = FakeCompletions(content)
+        self.chat = FakeChat(self.completions)
+
+
 def image_to_data_url(image: Image.Image) -> str:
     buffer = BytesIO()
     image.save(buffer, format="JPEG", quality=86)
@@ -45,8 +81,8 @@ def make_warm_anime_portrait_image() -> Image.Image:
     return image
 
 
-def test_warm_anime_portrait_is_not_classified_as_construction(monkeypatch, tmp_path):
-    monkeypatch.setenv("LANDSENSE_VLM_MODEL_DIR", str(tmp_path))
+def test_warm_anime_portrait_is_not_classified_as_construction(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     engine = VisionInferenceEngine()
 
     result = engine.predict([image_to_data_url(make_warm_anime_portrait_image())])
@@ -57,8 +93,8 @@ def test_warm_anime_portrait_is_not_classified_as_construction(monkeypatch, tmp_
     assert "irrelevant/non-construction" in result["description"]
 
 
-def test_mock_construction_image_still_scores_as_site(monkeypatch, tmp_path):
-    monkeypatch.setenv("LANDSENSE_VLM_MODEL_DIR", str(tmp_path))
+def test_mock_construction_image_still_scores_as_site(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     engine = VisionInferenceEngine()
 
     result = engine.predict([image_to_data_url(make_mock_construction_image())])
@@ -66,3 +102,25 @@ def test_mock_construction_image_still_scores_as_site(monkeypatch, tmp_path):
     assert result["construction_stage"] != "Unknown"
     assert result["progress_percentage"] > 0
     assert result["site_likelihood"] >= 0.35
+
+
+def test_openrouter_vision_result_overrides_local_estimate(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setenv("OPENROUTER_VISION_MODEL", "test/vision-model")
+    engine = VisionInferenceEngine()
+    fake_client = FakeOpenRouterClient(
+        '{"construction_stage":"Finishing","progress_percentage":88,'
+        '"confidence":0.91,"description":"Exterior work appears nearly complete."}'
+    )
+    engine._openrouter_client = fake_client
+
+    result = engine.predict([image_to_data_url(make_mock_construction_image())])
+
+    assert result["construction_stage"] == "Finishing"
+    assert result["progress_percentage"] == 88
+    assert result["confidence"] == 0.91
+    assert result["openrouter_enabled"] is True
+    assert result["openrouter_model"] == "test/vision-model"
+    assert result["openrouter_error"] is None
+    assert fake_client.completions.last_kwargs["model"] == "test/vision-model"
+    assert fake_client.completions.last_kwargs["messages"][1]["content"][1]["type"] == "image_url"
