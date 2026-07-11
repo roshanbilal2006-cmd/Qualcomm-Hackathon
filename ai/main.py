@@ -9,14 +9,24 @@ load_dotenv()
 
 try:
     from ai.engine import ImageDecodeError, VisionInferenceEngine
+    from ai.npu_engine import LocalNPUEngine
 except ModuleNotFoundError:
     from engine import ImageDecodeError, VisionInferenceEngine
+    from npu_engine import LocalNPUEngine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("landsense.ai")
 
-app = FastAPI(title="LandSense OpenRouter + OpenCV AI Service", version="1.0.0")
-engine = VisionInferenceEngine()
+app = FastAPI(title="LandSense AI Service", version="1.0.0")
+
+# Attempt to load NPU engine first
+npu_engine = LocalNPUEngine(model_dir="ai/models/vlm")
+if getattr(npu_engine, "loaded", False):
+    engine = npu_engine
+    logger.info("Using Local NPU Engine")
+else:
+    engine = VisionInferenceEngine()
+    logger.info("Falling back to Vision Inference Engine (OpenRouter/OpenCV)")
 
 
 class PredictRequest(BaseModel):
@@ -39,18 +49,18 @@ async def predict(payload: PredictRequest):
 async def health():
     return {
         "model": engine.model_name,
-        "status": "loaded" if engine.loaded else "not_loaded",
-        "device": engine.device,
-        "runtime_backend": engine.runtime_backend,
-        "ai_backend": "openrouter_opencv",
-        "model_artifacts_loaded": False,
-        "model_dir": None,
+        "status": "loaded" if getattr(engine, "loaded", False) else "not_loaded",
+        "device": getattr(engine, "device", "unknown"),
+        "runtime_backend": getattr(engine, "runtime_backend", "unknown"),
+        "ai_backend": "npu_vlm" if isinstance(engine, LocalNPUEngine) else "openrouter_opencv",
+        "model_artifacts_loaded": getattr(engine, "loaded", False),
+        "model_dir": getattr(engine, "model_dir", None),
         "transformers_model_dir": None,
-        "openrouter_enabled": bool(engine.openrouter_api_key),
-        "openrouter_model": engine.openrouter_vision_model if engine.openrouter_api_key else None,
-        "openrouter_error": engine._openrouter_error,
-        "opencv_enabled": True,
-        "inference_ready": engine.loaded,
+        "openrouter_enabled": bool(getattr(engine, "openrouter_api_key", False)),
+        "openrouter_model": getattr(engine, "openrouter_vision_model", None) if getattr(engine, "openrouter_api_key", False) else None,
+        "openrouter_error": getattr(engine, "_openrouter_error", getattr(engine, "load_error", None)),
+        "opencv_enabled": not isinstance(engine, LocalNPUEngine),
+        "inference_ready": getattr(engine, "loaded", False),
     }
 
 
