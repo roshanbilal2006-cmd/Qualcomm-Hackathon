@@ -5,7 +5,7 @@ class ReraProjectSchema(BaseModel):
     name: str
     builder: str
     status: str
-    distance: float
+    distance: float = 0.0
 
 class ObservationInput(BaseModel):
     timestamp: str

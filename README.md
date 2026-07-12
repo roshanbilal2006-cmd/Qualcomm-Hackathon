@@ -1,13 +1,28 @@
 # LandSense AI
 
-Multi-device construction intelligence platform powered by Snapdragon AI.
+A multi-device platform including a Mobile App, Snapdragon X laptop, IoT hardware, Cloud, and Web Dashboard. **Built entirely on the Qualcomm tech stack and optimized for Qualcomm devices**, LandSense AI is a ***truly Multiverse project*** that predicts and tracks the development of land.
 
-This branch, `AI-VLM`, is the current integration branch for the hackathon build. It contains the Android mobile app, backend orchestration layer, cloud/community layer, laptop-side AI/VLM image processing boundary, IoT simulator, MCP/RERA simulator, and web dashboard.
+LandSense AI is a crowdsourced platform that takes the following inputs:
+1. Photos from a mobile phone
+2. GPS location from a mobile phone
+3. Sound and dust sensor data from IoT devices
+4. Construction data from RERA 
+5. Historical data from other users stored in the cloud
+
+And computes the following outputs:
+1. Construction Stage
+2. Confidence Score
+3. Historical Context
+4. Noise Levels
+5. Dust Levels (PM2.5/PM10)
+6. RERA Verification Status
+
+These inputs and outputs are fused to generate a **Development Score** quantifying the progress of the development on that construction site.
 
 The intended product flow is simple:
 
 ```text
-Android phone captures photos + GPS
+Android phone captures photos + GPS 
         |
         v
 Laptop backend receives the scan
@@ -25,52 +40,38 @@ Cloud stores processed community observations
 Android displays report + heatmap + nearby history
 ```
 
-Android should not run heavy AI inference for this version. The phone only captures inputs and displays outputs. Image preprocessing/inference lives on the laptop AI service in `ai/`.
+## Tech Stack & Data Flow
 
-## What Is Built
+- **Android Phone**: Uses a TensorFlow Lite (Vision v2) model to process the image locally. GPS is recorded for heatmap plotting.
+- **Snapdragon X Laptop**: Runs a LiteRT VLM + Gemma 4 model for deep image preprocessing when the user requests higher accuracy than the phone's on-device model. The laptop receives both the raw images and the initial descriptions.
+- **Arduino (IoT)**: Monitors live noise and dust levels at the construction site. This telemetry is grouped into a cluster alongside the image descriptions and GPS coordinates.
+- **RERA Integration**: RERA data of the nearest construction project is fetched using the GPS coordinates and added to the cluster.
+- **Cirrascale LLM**: The full cluster is pushed to a Cirrascale Llama 3 model, which evaluates historical data and assigns a smart Development Score.
+- **Community Cloud**: The final output from Cirrascale is saved in the cloud for future users. The GPS coordinates are plotted to form a public heatmap of development in the area.
 
-- FastAPI backend orchestrator on port `8000`.
-- Laptop-side AI service on port `8001`.
-- AI image engine in `ai/engine.py` that decodes Base64/data URL images, extracts OpenCV visual features, uses OpenRouter vision for construction stage/progress/confidence when `OPENROUTER_API_KEY` is configured, and returns embeddings.
-- IoT/Arduino simulator on port `8002`.
-- Cloud/community intelligence service on port `8003`.
-- MCP/RERA simulator on port `8004`.
-- Static web dashboard on port `8080`.
-- Native Android app in `mobile/` built with Kotlin, Jetpack Compose, CameraX, Hilt, Retrofit, Room, OSMDroid/OpenStreetMap, and TensorFlow Lite Task Vision.
-- Android onboarding, home dashboard, backend health indicator, laptop IP settings, live CameraX capture, optional speech query, scan upload, result report, scan history, community heatmap, and chat assistant screens.
-- Android captures up to 4 photos, compresses/resizes them to JPEG data URLs, tags scans with GPS and UTC timestamp, sends them to `POST /observation`, and stores successful observations in Room for history fallback.
-- Android runs a lightweight on-device construction classifier from `mobile/app/src/main/assets/construction_model.tflite` for immediate local feedback, while backend/OpenRouter remains the source of the final fused report.
-- SQLite local database with seeded RERA/demo projects.
-- Backend-to-cloud sync for processed observations.
-- Heatmap and history APIs.
-- Correlation logic for matching camera scans with sensor readings.
-- Development score logic with explainable summary output.
-- Imported IoT + MCP REST data layer at the repository root, with mock RERA data,
-  demo sensor readings, and a serial Arduino adapter for live hackathon hardware.
+**Tech Stack**- 
+**mobile** - LiteRT vision 2 TFLite model 
+**laptop** - LiteRT VLM + Gemma 4 model , GENIE x, Gemma gguf Quantized, 
+**cloud** - SQLite , Cirrascale 
+**Aurdino** - KY-037 (dust sensor), p.25 (dust sensor)
 
-## What Is Still Missing
 
-### Android App
 
-The Android client is implemented in `mobile/`. Remaining client work is mostly demo polish and hardening:
+### Project file structure + Detailed description
 
-- Replace the committed default laptop IP in `SettingsRepository` with the current demo laptop IP from the Settings screen before running on a device.
-- Validate the bundled `construction_model.tflite` labels and accuracy against real construction-site photos.
-- Add richer offline upload retry if a scan is captured while the backend is unreachable. The app currently caches successful observations and falls back to Room for history/result reads.
-- Expand map controls around the existing OSMDroid/OpenStreetMap heatmap. The My Location FAB is currently a demo placeholder.
-- Improve production error handling for camera/image decode, speech recognizer availability, and backend validation errors.
+```text
+mobile/    Native Android app (Kotlin, Compose, CameraX, LiteRT for on-device ML)
+ai/        Laptop VLM service (FastVLM / Snapdragon NPU for image processing)
+backend/   Orchestrator, data fusion, and local SQLite DB for historical/RERA data
+cloud/     Community intelligence service, heatmap, and history APIs
+iot/       Simulated/live Arduino serial adapter for sound/dust telemetry
+mcp/       RERA simulator for mock regulatory lookup
+web/       Static browser dashboard for visualizing the community heatmap
+scripts/   Test and demo runners for the various microservices
+```
+This microservice architecture ensures heavy inference remains on the laptop/backend while the mobile device efficiently focuses on data capture and local feedback.
 
-### OpenRouter VLM
 
-The laptop AI service now uses OpenRouter as the primary VLM and OpenCV as the local visual preprocessing/guardrail layer. Set `OPENROUTER_API_KEY` in `.env` and choose a vision-capable model with `OPENROUTER_VISION_MODEL`. If the key or API is unavailable, the service falls back to OpenCV-only analysis while preserving the same backend contract.
-
-### Real MCP
-
-The MCP simulator exists, but the active backend pipeline still uses local SQLite RERA records for nearby project lookup. The next integration step is to route RERA/project lookups through `backend.adapters.mcp_adapter.MCPAdapter` with SQLite as fallback.
-
-### Real IoT
-
-The Arduino UNO Q path is simulated. Real dust/noise hardware should expose the same telemetry shape as `GET /sensor`.
 
 ## Branch Commands
 
@@ -308,6 +309,54 @@ Heatmap points can be colored by `development_score`:
 - `31-60`: medium activity.
 - `61-100`: high activity.
 
+## Detailed Flowchart & Data Lifecycle
+
+The following flowchart illustrates the step-by-step lifecycle of a single construction scan and the data extracted at each phase:
+
+```mermaid
+flowchart TD
+    A[Android App Capture] -->|Raw Data: Photos, GPS, Timestamp, Voice Query| B(Laptop AI Service)
+    B -->|Processed AI Data: Stage, Progress %, Confidence, Image Embeddings| C(Backend Orchestrator)
+    
+    C -->|Coordinates| D[IoT Sensor Adapter]
+    C -->|Coordinates| E[MCP RERA Database Adapter]
+    
+    D -->|Telemetry: Noise dB, Dust PM2.5/PM10| C
+    E -->|Regulatory Data: Nearby Approved Projects, Distances| C
+    
+    C -->|Data Fusion Engine| F[Fused Result: Development Score & Summary]
+    F -->|Local DB| G[(Local SQLite Database)]
+    F -->|Network Sync| H[(Cloud Community Layer)]
+    
+    H -->|Aggregated Data: Public Heatmap, Global Feed| I[Web Dashboard & App Heatmap]
+```
+
+### Data at Each Step:
+1. **Capture Phase (Mobile):** Generates `Base64/JPEG Images`, `Latitude/Longitude`, `UTC Timestamp`, and optional `Voice Transcripts`.
+2. **AI Processing Phase (Laptop/Cloud):** Extracts visual intelligence including `Construction Stage` (e.g., Excavation, Structural), `Progress Percentage`, and `Visual Confidence Score`.
+3. **IoT & MCP Context Phase (Backend):** Correlates spatial data to retrieve live `Noise (dB)`, `Dust (PM2.5/PM10)`, and matches the site with `RERA Approved/Rejected Projects`.
+4. **Data Fusion Phase:** Synthesizes all inputs into a final `Development Score (0-100)` and an `Explainable AI Summary`.
+5. **Community Phase:** Data is stripped of PII (Private Identifiable Information) and pushed to the public cloud to feed the `Global Heatmap` and `Dashboard Analytics`.
+
+## Project Impact & Use Cases
+
+LandSense AI bridges the gap between digital vision, physical sensors, and regulatory compliance. It transforms unstructured urban visual data into structured, actionable intelligence.
+
+### How It Is Useful (Uses for the People):
+- **For Citizens & Homebuyers:** Buyers can simply snap a picture of a construction site to instantly know if it's legally approved by RERA, see how much progress has been made, and verify if the builder is meeting environmental standards (noise/dust limits).
+- **For City Planners & Regulators:** Municipalities get a real-time, community-sourced heatmap of urban development. They can identify illegal, unapproved construction zones or sites that are violating pollution norms without sending inspectors everywhere.
+- **For Builders & Contractors:** Developers can maintain a transparent, timestamped visual ledger of their progress, correlating it with IoT sensors to prove compliance with environmental regulations.
+- **For Environmental Agencies:** Provides a live map correlating heavy construction activity with localized spikes in dust (PM2.5) and noise pollution, enabling targeted interventions.
+
+## How to Extend This Project
+
+The modular microservice architecture makes it incredibly easy to extend:
+1. **Satellite Imagery Integration:** The `ai/` service could be expanded to process satellite feeds alongside mobile photos to track large-scale land changes automatically.
+2. **Drone Deployments:** The Android input layer can be replaced or augmented with automated drone fleets uploading real-time aerial feeds to the `/observation` endpoint.
+3. **Advanced IoT Hardware:** The simulated Arduino adapter can be swapped for a fleet of industrial-grade LoRaWAN environmental sensors deployed across smart cities.
+4. **Blockchain / Smart Contracts:** The `Development Score` and `Progress %` can be piped into a smart contract to automatically release escrow funds to builders when construction hits verifiable milestones.
+5. **Predictive AI:** Extend the cloud layer to use historical timeline data (image embeddings + timestamps) to predict *when* a project will be completed, flagging potential delays before they happen.
+
 ## Current Architecture
 
 ```text
@@ -440,7 +489,7 @@ docs/                  Architecture and API docs
 
 - `mobile/local.properties` is machine-specific and should not be committed.
 - `cloud_data.db` may appear as an untracked local runtime database.
-- The AI engine is OpenRouter + OpenCV. Without `OPENROUTER_API_KEY`, prediction still works in OpenCV fallback mode but cloud VLM reasoning is disabled.
+- The AI engine is Snapdragon NPU + OpenCV. Prediction works fully offline using the local VLM.
 - Invalid Android images currently fall back to mock AI output through the adapter; for production, invalid images should return a clear validation error.
 - The mobile heatmap uses OSMDroid/OpenStreetMap, so no Google Maps key is required.
 
