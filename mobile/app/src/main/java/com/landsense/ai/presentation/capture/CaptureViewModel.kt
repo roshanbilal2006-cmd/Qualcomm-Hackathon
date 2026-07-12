@@ -42,7 +42,8 @@ data class CaptureState(
     val isRecording: Boolean = false,
     val location: Location? = null,
     val uploadStatusText: String? = null,
-    val localPrediction: String? = null             // Phase 11: LiteRT inference result
+    val localPrediction: String? = null,            // Phase 11: LiteRT inference result
+    val isQuickMode: Boolean = false                // Toggle for local vs cloud
 )
 
 private const val MAX_IMAGES = 4
@@ -62,6 +63,10 @@ class CaptureViewModel @Inject constructor(
     val state: StateFlow<CaptureState> = _state.asStateFlow()
 
     private val executor = Executors.newSingleThreadExecutor()
+
+    fun toggleMode(isQuick: Boolean) {
+        _state.update { it.copy(isQuickMode = isQuick) }
+    }
 
     fun capturePhoto(imageCapture: ImageCapture) {
         if (_state.value.images.size >= MAX_IMAGES || _state.value.isCapturing) return
@@ -141,37 +146,73 @@ class CaptureViewModel @Inject constructor(
                 }
                 return@launch
             }
-            _state.update { it.copy(location = location, uploadStatusText = "Sending to backend...") }
+            _state.update { it.copy(location = location, uploadStatusText = "Processing...") }
 
-            // 2. Build request — images already in "data:image/jpeg;base64,..." format
             val ownerId = settingsRepository.getOwnerId()
-            val request = ObservationRequest(
-                timestamp = Instant.now().toString(),
-                ownerId = ownerId,
-                latitude = location.latitude,
-                longitude = location.longitude,
-                images = _state.value.images,
-                voiceQuery = _state.value.voiceQuery
-            )
 
-            // 3. Submit
-            val result = repository.submitObservation(request)
-            result.onSuccess { response ->
+            if (_state.value.isQuickMode) {
+                // Quick Mode: Bypass backend, save locally
+                val localId = java.util.UUID.randomUUID().toString()
+                val mockResponse = com.landsense.ai.data.network.ObservationResponse(
+                    observationId = localId,
+                    timestamp = Instant.now().toString(),
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    images = _state.value.images,
+                    voiceQuery = _state.value.voiceQuery,
+                    constructionStage = _state.value.localPrediction ?: "Unknown",
+                    confidence = 0.9,
+                    progress = 0.0,
+                    noiseDb = null,
+                    dustPm25 = null,
+                    dustPm10 = null,
+                    sensorStatus = "disconnected",
+                    reraProjects = emptyList(),
+                    developmentScore = 50.0,
+                    summary = "Local Quick Scan: ${_state.value.localPrediction}",
+                    embedding = emptyList()
+                )
+                
+                repository.saveLocalObservation(mockResponse, ownerId, isSynced = false)
+                
                 _state.update {
                     it.copy(
                         isUploading = false,
                         uploadSuccess = true,
                         uploadStatusText = null,
-                        successObservationId = response.observationId
+                        successObservationId = localId
                     )
                 }
-            }.onFailure { error ->
-                _state.update {
-                    it.copy(
-                        isUploading = false,
-                        uploadStatusText = null,
-                        errorMessage = "Backend unreachable. Check IP in Settings. ${error.localizedMessage}"
-                    )
+            } else {
+                // 2. Build request — images already in "data:image/jpeg;base64,..." format
+                val request = ObservationRequest(
+                    timestamp = Instant.now().toString(),
+                    ownerId = ownerId,
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    images = _state.value.images,
+                    voiceQuery = _state.value.voiceQuery
+                )
+
+                // 3. Submit to backend
+                val result = repository.submitObservation(request)
+                result.onSuccess { response ->
+                    _state.update {
+                        it.copy(
+                            isUploading = false,
+                            uploadSuccess = true,
+                            uploadStatusText = null,
+                            successObservationId = response.observationId
+                        )
+                    }
+                }.onFailure { error ->
+                    _state.update {
+                        it.copy(
+                            isUploading = false,
+                            uploadStatusText = null,
+                            errorMessage = "Backend unreachable. Check IP in Settings. ${error.localizedMessage}"
+                        )
+                    }
                 }
             }
         }

@@ -31,6 +31,7 @@ def get_heatmap(rs: RetrievalService = Depends(get_retrieval_service)):
     result = []
     for obs in observations:
         result.append(schemas.HeatmapItem(
+            observation_id=obs.observation_id,
             latitude=obs.latitude,
             longitude=obs.longitude,
             score=obs.development_score,

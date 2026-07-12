@@ -33,10 +33,6 @@ AI_PYTHON = ARM64_PYTHON if os.path.exists(ARM64_PYTHON) else sys.executable
 SERVICES = [
     # name            module / command (list)                              port   health-url                       required
     ("AI Service",    [AI_PYTHON, "-m", "ai.main"],                        8001,  "http://localhost:8001/health",  True),
-    ("IoT Service",   [sys.executable, "-m", "uvicorn",
-                       "iot.main:app", "--host", "0.0.0.0",
-                       "--port", "8002",
-                       "--reload", "--reload-dir", "iot"],                 8002,  "http://localhost:8002/sensor",  False),
     ("Cloud Service", [sys.executable, "-m", "cloud.main"],                8003,  "http://localhost:8003/heatmap", False),
     ("MCP Service",   [sys.executable, "-m", "uvicorn",
                        "mcp.main:app", "--host", "0.0.0.0",
@@ -54,7 +50,6 @@ LOG_PREFIX_WIDTH = 14   # chars to pad service name column
 # ANSI colours (Windows 10+ supports these natively)
 COLOURS = {
     "AI Service":    "\033[95m",   # magenta
-    "IoT Service":   "\033[96m",   # cyan
     "Cloud Service": "\033[94m",   # blue
     "MCP Service":   "\033[93m",   # yellow
     "Backend":       "\033[92m",   # green
@@ -252,7 +247,6 @@ def main() -> None:
 +------------------------------------------------------+
 |  Backend API    ->  http://localhost:8000             |
 |  AI Service     ->  http://localhost:8001             |
-|  IoT Service    ->  http://localhost:8002             |
 |  Cloud Service  ->  http://localhost:8003             |
 |  MCP Service    ->  http://localhost:8004             |
 |  Web Dashboard  ->  http://localhost:8080             |

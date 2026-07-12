@@ -225,6 +225,30 @@ fun CaptureScreen(
                             }
                         }
 
+                        // Processing Mode Toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (state.isQuickMode) "Quick Mode (Local AI)" else "Normal Mode (Deepthink)",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = if (state.isQuickMode) "Instant results, bypasses cloud backend." else "Full NPU analytics, syncs to web dashboard.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = state.isQuickMode,
+                                onCheckedChange = { viewModel.toggleMode(it) },
+                                colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
+                            )
+                        }
+
                         // Submit button
                         Button(
                             onClick = { viewModel.submitObservation() },

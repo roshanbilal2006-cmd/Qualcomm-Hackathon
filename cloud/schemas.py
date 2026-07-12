@@ -18,6 +18,7 @@ class ObservationCreate(BaseModel):
     embedding: List[float]
 
 class HeatmapItem(BaseModel):
+    observation_id: str
     latitude: float
     longitude: float
     score: int

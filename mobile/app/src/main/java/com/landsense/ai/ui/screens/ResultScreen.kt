@@ -19,8 +19,18 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.landsense.ai.data.network.ObservationResponse
 import com.landsense.ai.data.network.ReraProject
 import com.landsense.ai.presentation.result.ResultViewModel
+import android.content.Context
 import android.content.Intent
-
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Point
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.viewinterop.AndroidView
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Overlay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultScreen(
@@ -30,6 +40,11 @@ fun ResultScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+        Configuration.getInstance().userAgentValue = "com.landsense.ai"
+    }
 
     LaunchedEffect(observationId) {
         viewModel.loadObservation(observationId)
@@ -220,6 +235,19 @@ private fun ObservationReport(obs: ObservationResponse) {
                 }
             }
         }
+
+        // Mini Heatmap
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().height(200.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    MiniOsmMap(obs)
+                }
+            }
+        }
     }
 }
 
@@ -353,4 +381,51 @@ fun AnimatedScoreCard(modifier: Modifier = Modifier, title: String, score: Float
             }
         }
     }
+}
+
+private class MiniCircleOverlay(
+    private val geoPoint: GeoPoint,
+    private val color: Int,
+    private val radiusPx: Float = 36f
+) : Overlay() {
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        this.color = (color and 0xFFFFFF) or 0x99000000.toInt()
+    }
+    private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        this.color = color
+    }
+
+    override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean) {
+        if (shadow) return
+        val screenPoint = Point()
+        mapView.projection.toPixels(geoPoint, screenPoint)
+        canvas.drawCircle(screenPoint.x.toFloat(), screenPoint.y.toFloat(), radiusPx, fillPaint)
+        canvas.drawCircle(screenPoint.x.toFloat(), screenPoint.y.toFloat(), radiusPx, strokePaint)
+    }
+}
+
+@Composable
+private fun MiniOsmMap(obs: ObservationResponse) {
+    val geoPoint = GeoPoint(obs.latitude, obs.longitude)
+    val color = when {
+        obs.constructionStage?.lowercase()?.contains("complet") == true -> Color(0xFF26C6DA)
+        obs.developmentScore >= 70 -> Color(0xFFE53935)
+        else -> Color(0xFFFF9800)
+    }.toArgb()
+
+    AndroidView(
+        factory = { ctx ->
+            MapView(ctx).apply {
+                setTileSource(TileSourceFactory.MAPNIK)
+                setMultiTouchControls(false)
+                controller.setZoom(16.0)
+                controller.setCenter(geoPoint)
+                overlays.add(MiniCircleOverlay(geoPoint, color))
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 }

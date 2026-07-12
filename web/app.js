@@ -73,7 +73,7 @@ function createMockConstructionImageDataUrl() {
 async function fetchHistory() {
   try {
     const [historyResponse, heatmapResponse] = await Promise.all([
-      fetch(`${BACKEND_URL}/history?owner_id=${encodeURIComponent(ownerId)}`),
+      fetch(`${BACKEND_URL}/history`),
       fetch(`${BACKEND_URL}/heatmap`)
     ]);
 
@@ -91,6 +91,8 @@ async function fetchHistory() {
     
     if (selectedObservationId) {
       showObservationDetails(selectedObservationId);
+    } else if (observationsList.length > 0) {
+      selectObservation(observationsList[0].observation_id);
     }
   } catch (error) {
     console.error("Error fetching system history:", error);
@@ -101,7 +103,7 @@ async function fetchHistory() {
 function renderFeed() {
   const container = document.getElementById("observation-list");
   if (observationsList.length === 0) {
-    container.innerHTML = `<div class="feed-empty">No private observations uploaded from this browser session yet.</div>`;
+    container.innerHTML = `<div class="feed-empty">No observations in the system feed yet. Submit a scan from your phone!</div>`;
     return;
   }
 

@@ -4,9 +4,8 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from backend.models.domain import ObservationInput, ObservationResponse
-from backend.models.db import DBObservation, DBReraProject
+from backend.models.db import DBObservation
 from backend.adapters.ai_adapter import AIAdapter
-from backend.adapters.iot_adapter import IoTAdapter
 from backend.adapters.cloud_adapter import CloudAdapter
 from backend.adapters.mcp_adapter import MCPAdapter
 from backend.fusion.correlation import correlate_sensor_data, haversine_distance
@@ -18,7 +17,6 @@ class ObservationPipeline:
     def __init__(self, db: Session):
         self.db = db
         self.ai_adapter = AIAdapter()
-        self.iot_adapter = IoTAdapter()
         self.cloud_adapter = CloudAdapter()
         self.mcp_adapter = MCPAdapter()
 
@@ -38,7 +36,8 @@ class ObservationPipeline:
         ai_result = await self.ai_adapter.predict(input_data.images)
         logger.info(f"AI Prediction received: Stage={ai_result.get('stage')}, Progress={ai_result.get('progress')}%")
 
-        # Step 4: Use only telemetry that was explicitly supplied with the upload.
+        # Step 4: Obtain environment telemetry from MCP Service (formerly IoT)
+        sensor_data = {}
         if input_data.noise_db is not None or input_data.dust_pm25 is not None or input_data.dust_pm10 is not None:
             sensor_data = {
                 "timestamp": input_data.sensor_timestamp or input_data.timestamp,
@@ -53,12 +52,7 @@ class ObservationPipeline:
             if input_data.dust_pm10 is not None:
                 sensor_data["pm10"] = input_data.dust_pm10
         else:
-            sensor_data = {
-                "timestamp": input_data.timestamp,
-                "device_id": "NO_SENSOR_INPUT",
-                "latitude": input_data.latitude,
-                "longitude": input_data.longitude
-            }
+            sensor_data = await self.mcp_adapter.get_sensor_data(latitude=input_data.latitude, longitude=input_data.longitude)
         
         # Step 5: Correlation Engine Checks
         # The sensor node reports its coordinates (either hardcoded or dynamic)
@@ -85,28 +79,19 @@ class ObservationPipeline:
             pm10 = sensor_data.get("pm10")
             sensor_status = "connected" if any(value is not None for value in (noise_db, pm25, pm10)) else "degraded"
             if sensor_status == "connected":
-                logger.info("IoT sensor data correlated successfully.")
+                logger.info("IoT sensor data correlated successfully via MCP.")
             else:
                 logger.info("No dust/noise telemetry supplied with observation.")
         else:
             logger.warning("IoT sensor telemetry ignored (fails time or distance correlation window).")
 
-        # Step 6: SQLite RERA Lookup (radius search up to 500m)
-        rera_projects = []
-        db_projects = self.db.query(DBReraProject).all()
-        for p in db_projects:
-            dist = haversine_distance(input_data.latitude, input_data.longitude, p.latitude, p.longitude)
-            if dist <= 500.0:
-                rera_projects.append({
-                    "name": p.name,
-                    "builder": p.builder,
-                    "status": p.status,
-                    "distance": round(dist, 1)
-                })
-        
-        # Sort by distance
-        rera_projects.sort(key=lambda x: x["distance"])
-        logger.info(f"SQLite RERA lookup found {len(rera_projects)} projects within 500m.")
+        # Step 6: MCP RERA Lookup (radius search up to 500m)
+        rera_projects = await self.mcp_adapter.get_nearby_projects(
+            latitude=input_data.latitude,
+            longitude=input_data.longitude,
+            radius_meters=500.0
+        )
+        logger.info(f"MCP RERA lookup found {len(rera_projects)} projects within 500m.")
 
         # Step 7: Perform Data Fusion & Scoring
         fusion_result = calculate_development_score(

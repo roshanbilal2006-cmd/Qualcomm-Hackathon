@@ -19,13 +19,18 @@ except ImportError:
 logger = logging.getLogger("landsense.ai.npu_engine")
 
 ALLOWED_STAGES = [
+    "Empty Plot",
     "Not Started",
     "Site Preparation",
     "Foundation",
     "Structural Work",
     "Brickwork",
+    "Ongoing Building Construction",
     "Finishing",
     "Completed",
+    "Developed Construction",
+    "House",
+    "Building",
     "Unknown",
 ]
 
@@ -55,15 +60,16 @@ class SnapdragonVisionEngine:
         started = time.perf_counter()
         
         try:
-            logger.info("Initializing GenieX AutoModelForCausalLM...")
-            # Point directly to the cached Hugging Face Q4_0 GGUF suite
+            logger.info(f"Initializing GenieX AutoModelForCausalLM with {model_dir}...")
+            # Attempt to load GGUF model
             self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_dir, 
+                self.model_dir,
                 precision="Q4_0"
             )
 
             self.loaded = True
             load_time_ms = round((time.perf_counter() - started) * 1000, 2)
+
             logger.info(
                 "%s initialized with %s on %s in %.2fms",
                 self.model_name,
@@ -123,10 +129,10 @@ class SnapdragonVisionEngine:
                 temp_paths.append(temp_path)
                 
             prompt_text = (
-                "Analyze this land or construction-site image for LandSense. "
+                "Analyze this image. If it is a real estate or construction-site image, it could be an empty plot, ongoing construction, developed construction, building, or house. "
+                "If the image is completely unrelated (e.g. a random selfie, an animal, a car, or something else), describe exactly what is in the photo in the 'description' field, but explicitly state that it is NOT a relevant real estate or construction photo. "
                 "Return ONLY a raw JSON dictionary without markdown code blocks, with these exact keys: construction_stage, progress_percentage, confidence, description. "
-                f"Allowed construction_stage values: {', '.join(ALLOWED_STAGES)}. "
-                "Use Unknown and 0 progress when the image does not show a construction site. "
+                f"Allowed construction_stage values: {', '.join(ALLOWED_STAGES)}. Use 'Unknown' for unrelated photos. "
                 "Keep confidence between 0 and 1. "
                 "Verify there is no site obstruction and no face selfies."
             )

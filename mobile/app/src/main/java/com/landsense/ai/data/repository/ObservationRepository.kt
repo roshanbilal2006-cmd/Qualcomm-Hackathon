@@ -15,6 +15,7 @@ import javax.inject.Singleton
 // ─── Interface ────────────────────────────────────────────────────────────────
 interface ObservationRepository {
     suspend fun submitObservation(request: ObservationRequest): Result<ObservationResponse>
+    suspend fun saveLocalObservation(response: ObservationResponse, ownerId: String, isSynced: Boolean = false): Result<Unit>
     suspend fun getObservationById(id: String): Result<ObservationResponse>
     suspend fun getHistory(ownerId: String): Result<List<ObservationResponse>>
     suspend fun getHeatmap(): Result<List<HeatmapPoint>>
@@ -35,6 +36,14 @@ class ObservationRepositoryImpl @Inject constructor(
                 // Save to Room on success
                 observationDao.insertObservation(response.toEntity(request.ownerId ?: "unknown"))
                 response
+            }
+        }
+    }
+
+    override suspend fun saveLocalObservation(response: ObservationResponse, ownerId: String, isSynced: Boolean): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                observationDao.insertObservation(response.toEntity(ownerId, isSynced))
             }
         }
     }
@@ -94,7 +103,7 @@ class ObservationRepositoryImpl @Inject constructor(
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
-fun ObservationResponse.toEntity(ownerId: String): ObservationEntity {
+fun ObservationResponse.toEntity(ownerId: String, isSynced: Boolean = true): ObservationEntity {
     return ObservationEntity(
         observationId = this.observationId,
         ownerId = ownerId,
@@ -114,7 +123,7 @@ fun ObservationResponse.toEntity(ownerId: String): ObservationEntity {
         developmentScore = this.developmentScore,
         summary = this.summary,
         embedding = this.embedding,
-        isSynced = true
+        isSynced = isSynced
     )
 }
 
