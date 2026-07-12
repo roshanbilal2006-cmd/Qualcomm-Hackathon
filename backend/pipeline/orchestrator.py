@@ -93,6 +93,17 @@ class ObservationPipeline:
         )
         logger.info(f"MCP RERA lookup found {len(rera_projects)} projects within 500m.")
 
+        # Crowdsourcing Fallback: if no valid live sensor data, use crowdsourced/historical values from RERA DB
+        if sensor_status != "connected" and rera_projects:
+            for project in rera_projects:
+                if project.get("noise_db") or project.get("dust_pm25") or project.get("dust_pm10"):
+                    noise_db = project.get("noise_db")
+                    pm25 = project.get("dust_pm25")
+                    pm10 = project.get("dust_pm10")
+                    sensor_status = "connected (crowdsourced)"
+                    logger.info(f"Using crowdsourced sensor fallback from nearby project: {project.get('name')}")
+                    break
+
         # Step 7: Perform Data Fusion & Scoring
         fusion_result = calculate_development_score(
             visual_stage=ai_result.get("stage", "Unknown"),

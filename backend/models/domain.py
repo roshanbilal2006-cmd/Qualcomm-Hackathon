@@ -6,6 +6,9 @@ class ReraProjectSchema(BaseModel):
     builder: str
     status: str
     distance: float = 0.0
+    noise_db: Optional[float] = None
+    dust_pm25: Optional[float] = None
+    dust_pm10: Optional[float] = None
 
 class ObservationInput(BaseModel):
     timestamp: str
