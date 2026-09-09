@@ -1,0 +1,38 @@
+[
+  {
+    "file": "mcp/adapters/sensor/dummy_sensor_adapter.py",
+    "symbol": "DummySensorAdapter",
+    "data_type": "noise_db / pm25 / pm10",
+    "fake_mechanism": "bounded random.uniform",
+    "example_description": "noise generated with random range 40-90; pm25 and pm10 generated with uniform ranges",
+    "downstream_impact": "Creates fake sensor readings used by status and scoring context",
+    "replacement_needed": true
+  },
+  {
+    "file": "mcp/adapters/rera/mock_rera_adapter.py",
+    "symbol": "MockRERAAdapter",
+    "data_type": "RERA/project records",
+    "fake_mechanism": "local static JSON file loaded by mock provider",
+    "example_description": "Mock RERA records in data/mock_rera.json define project metadata and distance fields",
+    "downstream_impact": "Provides default local project/regulatory context to routes and services",
+    "replacement_needed": true
+  },
+  {
+    "file": "mcp/config/settings.py",
+    "symbol": "Settings",
+    "data_type": "default provider mode",
+    "fake_mechanism": "hardcoded defaults for rera_mode='mock' and sensor_mode='demo'",
+    "example_description": "Default settings strongly prefer demo/mock configuration",
+    "downstream_impact": "Routes report mock or demo configuration by default",
+    "replacement_needed": true
+  },
+  {
+    "file": "ai/engine.py",
+    "symbol": "VisionInferenceEngine",
+    "data_type": "vision analysis output",
+    "fake_mechanism": "OpenCV-only inference fallback with deterministic summary generation",
+    "example_description": "Structured stage/progress/confidence summary generated from OpenCV heuristics",
+    "downstream_impact": "Provides fallback AI output when NPU or cloud provider is not active",
+    "replacement_needed": true
+  }
+]

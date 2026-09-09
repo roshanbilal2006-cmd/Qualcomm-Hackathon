@@ -1,0 +1,156 @@
+[
+  {
+    "component": "AI Service",
+    "path": "ai/main.py",
+    "type": "FastAPI service",
+    "status": "implemented",
+    "data_source": "image payload",
+    "real_or_mock": "partial real",
+    "dependencies": ["ai.engine", "ai.npu_engine"],
+    "consumers": ["backend", "testing"],
+    "notes": "NPU-first engine, OpenCV/OpenRouter fallback"
+  },
+  {
+    "component": "Vision Inference Engine",
+    "path": "ai/engine.py",
+    "type": "Python AI engine",
+    "status": "implemented",
+    "data_source": "images",
+    "real_or_mock": "partial real",
+    "dependencies": ["cv2", "PIL", "Pydantic"],
+    "consumers": ["ai/main.py"],
+    "notes": "OpenCV image feature analysis and fallback structured output"
+  },
+  {
+    "component": "Snapdragon NPU Engine",
+    "path": "ai/npu_engine.py",
+    "type": "Local NPU engine",
+    "status": "implemented",
+    "data_source": "images",
+    "real_or_mock": "partial real",
+    "dependencies": ["LiteRT/GenieX-like infrastructure"],
+    "consumers": ["ai/main.py"],
+    "notes": "Attempts local NPU acceleration; loads if artifacts exist"
+  },
+  {
+    "component": "Backend Orchestrator",
+    "path": "backend/main.py",
+    "type": "FastAPI service",
+    "status": "implemented",
+    "data_source": "observation input",
+    "real_or_mock": "real",
+    "dependencies": ["backend.api.routes", "backend.database.session"],
+    "consumers": ["mobile", "cloud"],
+    "notes": "Main API and startup database seeding"
+  },
+  {
+    "component": "Backend API Routes",
+    "path": "backend/api/routes.py",
+    "type": "FastAPI router",
+    "status": "implemented",
+    "data_source": "HTTP observations",
+    "real_or_mock": "real",
+    "dependencies": ["backend.pipeline.orchestrator"],
+    "consumers": ["backend", "cloud", "mobile"],
+    "notes": "Accepts observations and exposes project/history endpoints"
+  },
+  {
+    "component": "Scoring Engine",
+    "path": "backend/fusion/scoring.py",
+    "type": "rule-based scoring",
+    "status": "implemented",
+    "data_source": "AI, sensors, project context",
+    "real_or_mock": "real rules",
+    "dependencies": ["backend.models.domain"],
+    "consumers": ["backend/api/routes.py"],
+    "notes": "Deterministic threshold and confidence reasoning"
+  },
+  {
+    "component": "Local SQLite Database",
+    "path": "backend/database/session.py",
+    "type": "SQLite setup",
+    "status": "implemented",
+    "data_source": "backend observations",
+    "real_or_mock": "real",
+    "dependencies": ["SQLAlchemy"],
+    "consumers": ["backend", "cloud"],
+    "notes": "Local observation and history persistence"
+  },
+  {
+    "component": "Cloud API",
+    "path": "cloud/main.py",
+    "type": "FastAPI service",
+    "status": "implemented",
+    "data_source": "observations and retrieval",
+    "real_or_mock": "real",
+    "dependencies": ["cloud.database", "cloud.services"],
+    "consumers": ["web", "mobile", "chat"],
+    "notes": "Stores observations, responses, sensor and heatmap views"
+  },
+  {
+    "component": "MCP Service",
+    "path": "mcp/main.py",
+    "type": "FastAPI service",
+    "status": "implemented",
+    "data_source": "sensor and RERA provider adapters",
+    "real_or_mock": "mixed",
+    "dependencies": ["mcp.adapters.factory"],
+    "consumers": ["status", "routes", "project"],
+    "notes": "RERA, sensor, and project route integration layer"
+  },
+  {
+    "component": "Sensor Provider Factory",
+    "path": "mcp/adapters/factory.py",
+    "type": "provider factory",
+    "status": "implemented",
+    "data_source": "environment settings",
+    "real_or_mock": "mixed",
+    "dependencies": ["mcp.adapters.sensor", "mcp.adapters.rera"],
+    "consumers": ["mcp.main"],
+    "notes": "Switches between mock/live providers by settings"
+  },
+  {
+    "component": "Dummy Sensor Adapter",
+    "path": "mcp/adapters/sensor/dummy_sensor_adapter.py",
+    "type": "simulated sensor adapter",
+    "status": "implemented",
+    "data_source": "random.uniform",
+    "real_or_mock": "mock",
+    "dependencies": ["random"],
+    "consumers": ["sensor_service"],
+    "notes": "Generates bounded noise/PM data"
+  },
+  {
+    "component": "Mock RERA Adapter",
+    "path": "mcp/adapters/rera/mock_rera_adapter.py",
+    "type": "mock provider",
+    "status": "implemented",
+    "data_source": "mcp/data/mock_rera.json",
+    "real_or_mock": "mock",
+    "dependencies": ["json"],
+    "consumers": ["project_service", "rera_service"],
+    "notes": "Static local mock project dataset"
+  },
+  {
+    "component": "Android App",
+    "path": "mobile/app/src",
+    "type": "Kotlin/Compose app",
+    "status": "implemented",
+    "data_source": "camera, GPS, requests",
+    "real_or_mock": "partial real",
+    "dependencies": ["Android camera", "network"],
+    "consumers": ["backend"],
+    "notes": "Capture UI and report visualization"
+  },
+  {
+    "component": "Web Dashboard",
+    "path": "web/",
+    "type": "static HTML/JS dashboard",
+    "status": "implemented",
+    "data_source": "cloud endpoints",
+    "real_or_mock": "real UI",
+    "dependencies": ["http.server"],
+    "consumers": ["human user"],
+    "notes": "Static site for dashboard and heatmap"
+  }
+]
