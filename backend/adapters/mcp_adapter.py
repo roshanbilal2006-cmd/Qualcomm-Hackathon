@@ -89,7 +89,7 @@ class MCPAdapter:
                     "noise_db": noise_db,
                     "pm25": pm25,
                     "pm10": pm10,
-                    "timestamp": data.get("timestamp", datetime.now(timezone.utc).isoformat()),
+                    "timestamp": data.get("timestamp"),
                     "device_id": "CLOUD_LATEST_SENSOR",
                     "latitude": data.get("latitude"),
                     "longitude": data.get("longitude"),

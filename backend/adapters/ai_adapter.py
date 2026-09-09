@@ -28,15 +28,16 @@ class AIAdapter:
                     logger.error(f"AI Service returned status code {response.status_code}: {response.text}")
         except Exception as e:
             logger.error(f"Failed to connect to AI Service at {self.service_url}: {str(e)}")
-        
-        # Do not fabricate construction progress if the OpenRouter/OpenCV service is unavailable.
+
+        # Do not fabricate construction progress or an embedding when the AI
+        # service is unavailable; preserve a provider-neutral failure signal.
         logger.warning("AI service unavailable; returning explicit unknown visual result.")
         return {
             "stage": "Unknown",
             "progress": 0.0,
             "confidence": 0.0,
-            "description": "OpenRouter/OpenCV AI service unavailable; visual construction evidence was not verified.",
-            "embedding": [0.01] * 128
+            "description": "Current AI service unavailable; visual construction evidence was not verified.",
+            "embedding": [],
         }
 
     def _normalize_prediction(self, result: dict) -> dict:

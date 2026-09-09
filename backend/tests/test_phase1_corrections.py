@@ -1,5 +1,36 @@
+import asyncio
+
 from mcp.adapters.sensor.dummy_sensor_adapter import DummySensorAdapter
+from backend.adapters.ai_adapter import AIAdapter
 from backend.fusion.correlation import parse_iso_timestamp, correlate_sensor_data
+
+
+def test_ai_adapter_unavailable_fallback_is_provider_neutral_and_has_empty_embedding(monkeypatch):
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url, json):
+            raise RuntimeError("AI service unavailable")
+
+    monkeypatch.setattr("backend.adapters.ai_adapter.httpx.AsyncClient", FakeAsyncClient)
+
+    async def run_prediction():
+        return await AIAdapter(service_url="http://localhost:8001").predict(["/tmp/image.jpg"])
+
+    result = asyncio.run(run_prediction())
+
+    assert result["stage"] == "Unknown"
+    assert result["progress"] == 0.0
+    assert result["confidence"] == 0.0
+    assert result["description"] == "Current AI service unavailable; visual construction evidence was not verified."
+    assert result["embedding"] == []
 
 
 def test_dummy_sensor_identifies_simulated_payload_and_status():
