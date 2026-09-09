@@ -4,35 +4,59 @@
     "symbol": "DummySensorAdapter",
     "data_type": "noise_db / pm25 / pm10",
     "fake_mechanism": "bounded random.uniform",
-    "example_description": "noise generated with random range 40-90; pm25 and pm10 generated with uniform ranges",
-    "downstream_impact": "Creates fake sensor readings used by status and scoring context",
-    "replacement_needed": true
+    "source_of_value": "random.uniform(40,90), random.uniform(10,100), random.uniform(20,150)",
+    "downstream_path": ["mcp/adapters/factory.py", "mcp/services/sensor_service.py", "backend/adapters/mcp_adapter.py", "backend/pipeline/orchestrator.py", "backend/fusion/scoring.py"],
+    "affects_final_score": true,
+    "affects_user_output": true,
+    "replacement_needed": true,
+    "notes": "Fake sensor values reach the scoring path and can raise connected sensor status even though the adapter is dummy"
   },
   {
     "file": "mcp/adapters/rera/mock_rera_adapter.py",
     "symbol": "MockRERAAdapter",
     "data_type": "RERA/project records",
     "fake_mechanism": "local static JSON file loaded by mock provider",
-    "example_description": "Mock RERA records in data/mock_rera.json define project metadata and distance fields",
-    "downstream_impact": "Provides default local project/regulatory context to routes and services",
-    "replacement_needed": true
+    "source_of_value": "mcp/data/mock_rera.json",
+    "downstream_path": ["mcp/adapters/factory.py", "mcp/services/project_service.py", "mcp/routes/project_routes.py", "backend/adapters/mcp_adapter.py", "backend/pipeline/orchestrator.py", "backend/fusion/scoring.py"],
+    "affects_final_score": true,
+    "affects_user_output": true,
+    "replacement_needed": true,
+    "notes": "Project records define project names, statuses, and radius-based nearby matches; they are mock data"
   },
   {
     "file": "mcp/config/settings.py",
     "symbol": "Settings",
     "data_type": "default provider mode",
     "fake_mechanism": "hardcoded defaults for rera_mode='mock' and sensor_mode='demo'",
-    "example_description": "Default settings strongly prefer demo/mock configuration",
-    "downstream_impact": "Routes report mock or demo configuration by default",
-    "replacement_needed": true
+    "source_of_value": "BaseSettings defaults and environment config",
+    "downstream_path": ["mcp/adapters/factory.py", "mcp/services/status_service.py", "backend/pipeline/orchestrator.py"],
+    "affects_final_score": false,
+    "affects_user_output": true,
+    "replacement_needed": true,
+    "notes": "Configuration defaults force mock and demo operation until explicitly changed"
   },
   {
-    "file": "ai/engine.py",
-    "symbol": "VisionInferenceEngine",
-    "data_type": "vision analysis output",
-    "fake_mechanism": "OpenCV-only inference fallback with deterministic summary generation",
-    "example_description": "Structured stage/progress/confidence summary generated from OpenCV heuristics",
-    "downstream_impact": "Provides fallback AI output when NPU or cloud provider is not active",
-    "replacement_needed": true
+    "file": "backend/pipeline/orchestrator.py",
+    "symbol": "ObservationPipeline.execute",
+    "data_type": "hardcoded geographic fallback coordinates",
+    "fake_mechanism": "hardcoded fallback coordinates 12.9716 and 77.7500",
+    "source_of_value": "sensor_data.get('latitude', 12.9716) and sensor_data.get('longitude', 77.7500)",
+    "downstream_path": ["backend/fusion/correlation.py", "correlate_sensor_data()", "development_score"],
+    "affects_final_score": true,
+    "affects_user_output": true,
+    "replacement_needed": true,
+    "notes": "These are hardcoded geographic fallback coordinates used to evaluate whether sensor records correlate with the user site"
+  },
+  {
+    "file": "backend/adapters/ai_adapter.py",
+    "symbol": "AIAdapter.predict",
+    "data_type": "fallback AI output",
+    "fake_mechanism": "service unavailable fallback returns an explicit unknown visual result",
+    "source_of_value": "AI service unavailable error path in backend adapter",
+    "downstream_path": ["backend/pipeline/orchestrator.py", "calculate_development_score()", "ObservationResponse"],
+    "affects_final_score": true,
+    "affects_user_output": true,
+    "replacement_needed": true,
+    "notes": "A hardcoded Unknown stage/progress/confidence result can be sent down the score pipeline if the AI service is down"
   }
 ]

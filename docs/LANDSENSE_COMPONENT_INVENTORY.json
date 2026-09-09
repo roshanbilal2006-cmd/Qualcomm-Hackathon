@@ -6,9 +6,11 @@
     "status": "implemented",
     "data_source": "image payload",
     "real_or_mock": "partial real",
+    "production_readiness": "partial",
     "dependencies": ["ai.engine", "ai.npu_engine"],
     "consumers": ["backend", "testing"],
-    "notes": "NPU-first engine, OpenCV/OpenRouter fallback"
+    "affects_final_output": true,
+    "notes": "NPU-first engine, OpenCV/Cirrascale fallback contract"
   },
   {
     "component": "Vision Inference Engine",
@@ -17,9 +19,11 @@
     "status": "implemented",
     "data_source": "images",
     "real_or_mock": "partial real",
-    "dependencies": ["cv2", "PIL", "Pydantic"],
+    "production_readiness": "partial",
+    "dependencies": ["cv2", "PIL", "OpenAI"],
     "consumers": ["ai/main.py"],
-    "notes": "OpenCV image feature analysis and fallback structured output"
+    "affects_final_output": true,
+    "notes": "OpenCV image feature analysis and Cirrascale cloud provider fallback path"
   },
   {
     "component": "Snapdragon NPU Engine",
@@ -28,9 +32,11 @@
     "status": "implemented",
     "data_source": "images",
     "real_or_mock": "partial real",
-    "dependencies": ["LiteRT/GenieX-like infrastructure"],
+    "production_readiness": "partial",
+    "dependencies": ["geniex"],
     "consumers": ["ai/main.py"],
-    "notes": "Attempts local NPU acceleration; loads if artifacts exist"
+    "affects_final_output": true,
+    "notes": "Attempts local NPU acceleration; loads only when geniex artifact is present"
   },
   {
     "component": "Backend Orchestrator",
@@ -39,8 +45,10 @@
     "status": "implemented",
     "data_source": "observation input",
     "real_or_mock": "real",
+    "production_readiness": "partial",
     "dependencies": ["backend.api.routes", "backend.database.session"],
     "consumers": ["mobile", "cloud"],
+    "affects_final_output": true,
     "notes": "Main API and startup database seeding"
   },
   {
@@ -50,8 +58,10 @@
     "status": "implemented",
     "data_source": "HTTP observations",
     "real_or_mock": "real",
+    "production_readiness": "partial",
     "dependencies": ["backend.pipeline.orchestrator"],
     "consumers": ["backend", "cloud", "mobile"],
+    "affects_final_output": true,
     "notes": "Accepts observations and exposes project/history endpoints"
   },
   {
@@ -61,9 +71,11 @@
     "status": "implemented",
     "data_source": "AI, sensors, project context",
     "real_or_mock": "real rules",
+    "production_readiness": "partial",
     "dependencies": ["backend.models.domain"],
     "consumers": ["backend/api/routes.py"],
-    "notes": "Deterministic threshold and confidence reasoning"
+    "affects_final_output": true,
+    "notes": "Deterministic thresholds and confidence reasoning"
   },
   {
     "component": "Local SQLite Database",
@@ -72,8 +84,10 @@
     "status": "implemented",
     "data_source": "backend observations",
     "real_or_mock": "real",
+    "production_readiness": "partial",
     "dependencies": ["SQLAlchemy"],
     "consumers": ["backend", "cloud"],
+    "affects_final_output": true,
     "notes": "Local observation and history persistence"
   },
   {
@@ -83,8 +97,10 @@
     "status": "implemented",
     "data_source": "observations and retrieval",
     "real_or_mock": "real",
+    "production_readiness": "partial",
     "dependencies": ["cloud.database", "cloud.services"],
     "consumers": ["web", "mobile", "chat"],
+    "affects_final_output": true,
     "notes": "Stores observations, responses, sensor and heatmap views"
   },
   {
@@ -94,8 +110,10 @@
     "status": "implemented",
     "data_source": "sensor and RERA provider adapters",
     "real_or_mock": "mixed",
+    "production_readiness": "partial",
     "dependencies": ["mcp.adapters.factory"],
     "consumers": ["status", "routes", "project"],
+    "affects_final_output": true,
     "notes": "RERA, sensor, and project route integration layer"
   },
   {
@@ -105,8 +123,10 @@
     "status": "implemented",
     "data_source": "environment settings",
     "real_or_mock": "mixed",
+    "production_readiness": "partial",
     "dependencies": ["mcp.adapters.sensor", "mcp.adapters.rera"],
     "consumers": ["mcp.main"],
+    "affects_final_output": true,
     "notes": "Switches between mock/live providers by settings"
   },
   {
@@ -116,9 +136,11 @@
     "status": "implemented",
     "data_source": "random.uniform",
     "real_or_mock": "mock",
+    "production_readiness": "mock",
     "dependencies": ["random"],
     "consumers": ["sensor_service"],
-    "notes": "Generates bounded noise/PM data"
+    "affects_final_output": true,
+    "notes": "Generates bounded noise/PM data and claims connected status"
   },
   {
     "component": "Mock RERA Adapter",
@@ -127,9 +149,37 @@
     "status": "implemented",
     "data_source": "mcp/data/mock_rera.json",
     "real_or_mock": "mock",
+    "production_readiness": "mock",
     "dependencies": ["json"],
     "consumers": ["project_service", "rera_service"],
+    "affects_final_output": true,
     "notes": "Static local mock project dataset"
+  },
+  {
+    "component": "Live RERA Adapter",
+    "path": "mcp/adapters/rera/live_rera_adapter.py",
+    "type": "stub provider",
+    "status": "stub",
+    "data_source": "live_rera_base_url",
+    "real_or_mock": "unverified",
+    "production_readiness": "stub",
+    "dependencies": ["httpx"],
+    "consumers": ["rera_service"],
+    "affects_final_output": false,
+    "notes": "Configured only when a live base URL and optional API key are provided; the current adapter is a stub"
+  },
+  {
+    "component": "Arduino Sensor Adapter",
+    "path": "mcp/adapters/sensor/arduino_sensor_adapter.py",
+    "type": "serial sensor adapter",
+    "status": "implemented",
+    "data_source": "serial sensor data",
+    "real_or_mock": "live hardware path",
+    "production_readiness": "partial",
+    "dependencies": ["serial"],
+    "consumers": ["sensor_service"],
+    "affects_final_output": true,
+    "notes": "Requires serial port and parseable CSV-like sensor values"
   },
   {
     "component": "Android App",
@@ -138,8 +188,10 @@
     "status": "implemented",
     "data_source": "camera, GPS, requests",
     "real_or_mock": "partial real",
+    "production_readiness": "partial",
     "dependencies": ["Android camera", "network"],
     "consumers": ["backend"],
+    "affects_final_output": true,
     "notes": "Capture UI and report visualization"
   },
   {
@@ -149,8 +201,10 @@
     "status": "implemented",
     "data_source": "cloud endpoints",
     "real_or_mock": "real UI",
+    "production_readiness": "partial",
     "dependencies": ["http.server"],
     "consumers": ["human user"],
+    "affects_final_output": false,
     "notes": "Static site for dashboard and heatmap"
   }
 ]
