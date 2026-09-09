@@ -24,9 +24,10 @@ def test_sensor_endpoint_returns_valid_reading_shape():
         assert data == {"status": "offline"}
     else:
         # Reading shape
-        assert set(data.keys()) == {
-            "device_id", "timestamp", "noise_db", "pm25", "pm10"
-        }
+        assert {"device_id", "timestamp", "noise_db", "pm25", "pm10"}.issubset(
+            data.keys()
+        )
+        assert {"sensor_source", "data_origin"}.issubset(data.keys())
         assert 40 <= data["noise_db"] <= 90
         assert 10 <= data["pm25"] <= 100
         assert 20 <= data["pm10"] <= 150

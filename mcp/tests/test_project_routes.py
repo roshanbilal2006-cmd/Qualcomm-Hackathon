@@ -24,7 +24,8 @@ def test_nearby_projects_contract_has_no_id_field():
     assert len(data) > 0
 
     for project in data:
-        assert set(project.keys()) == {"name", "builder", "status", "distance"}
+        assert {"name", "builder", "status", "distance"}.issubset(project.keys())
+        assert {"source", "data_origin"}.issubset(project.keys())
         assert "id" not in project
 
 
@@ -36,6 +37,16 @@ def test_project_by_id_returns_200_for_known_id():
     data = response.json()
     assert data["id"] == "RERA-KA-00123"
     assert data["name"] == "Prestige Tech Park"
+
+
+def test_nearby_projects_provenance_survives_projection_boundary():
+    response = client.get("/nearby_projects")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) > 0
+    record = data[0]
+    assert record.get("source") == "mock"
+    assert record.get("data_origin") == "mock"
 
 
 def test_project_by_id_returns_404_for_unknown_id():

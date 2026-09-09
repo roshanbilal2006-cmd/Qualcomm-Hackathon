@@ -35,9 +35,9 @@ class ProjectService:
 
         # Validate against the full model first (ensures data integrity),
         # then project down to the locked public contract for this
-        # endpoint - name, builder, status, distance only. No `id`.
+        # endpoint - name, builder, status, distance, and provenance.
         full_projects = [RERAProject(**project) for project in raw_projects]
-        
+
         # Filter projects that are within the specified radius
         return [
             NearbyProject(
@@ -45,6 +45,8 @@ class ProjectService:
                 builder=project.builder,
                 status=project.status,
                 distance=project.distance,
+                source=project.source,
+                data_origin=project.data_origin,
             )
             for project in full_projects
             if project.distance <= radius_meters

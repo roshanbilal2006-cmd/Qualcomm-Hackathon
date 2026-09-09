@@ -26,7 +26,7 @@ if getattr(npu_engine, "loaded", False):
     logger.info("Using Local NPU Engine")
 else:
     engine = VisionInferenceEngine()
-    logger.info("Falling back to Vision Inference Engine (OpenRouter/OpenCV)")
+    logger.info("Falling back to Vision Inference Engine (Cirrascale/OpenCV)")
 
 
 class PredictRequest(BaseModel):

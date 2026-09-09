@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class StatusResponse(BaseModel):
-    arduino: Literal["connected", "disconnected"] = Field(
+    arduino: Literal["connected", "disconnected", "simulated"] = Field(
         ..., examples=["connected"]
     )
     sensor_mode: Literal["demo", "live"] = Field(..., examples=["demo"])

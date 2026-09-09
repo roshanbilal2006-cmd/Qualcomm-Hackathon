@@ -19,3 +19,5 @@ class NearbyProject(BaseModel):
         ..., examples=["Approved"]
     )
     distance: float = Field(..., ge=0, examples=[0.9])
+    source: str = Field(default="unknown", examples=["mock"])
+    data_origin: str = Field(default="unknown", examples=["mock"])

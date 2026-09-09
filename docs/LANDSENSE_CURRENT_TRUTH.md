@@ -53,12 +53,7 @@ This is supplied by the observation request payload at the backend API: `latitud
 
 B. Sensor GPS
 
-The MCP sensor provider returns sensor readings with `device_id`, `timestamp`, `noise_db`, `pm25`, `pm10` only. The dummy adapter has no physical GPS fields. The dummy adapter does not carry a true sensor GPS coordinate. The backend pipeline, however, uses hardcoded fallback legal coordinates when no sensor latitude/longitude fields are present:
-
-- `sensor_lat = sensor_data.get("latitude", 12.9716)`
-- `sensor_lon = sensor_data.get("longitude", 77.7500)`
-
-These are hardcoded geographic fallback values in `backend/pipeline/orchestrator.py` and are used in the correlation threshold check. They influence correlation because `correlate_sensor_data()` uses them to compute distance from the site-requested phone coordinates.
+The MCP sensor provider returns sensor readings with `device_id`, `timestamp`, `noise_db`, `pm25`, and `pm10` only. The dummy adapter has no physical GPS fields. The dummy adapter does not carry a true sensor GPS coordinate. The backend pipeline now inspects `sensor_data.get("latitude")` and `sensor_data.get("longitude")` only when those keys exist in the upstream payload, and missing coordinates are treated as missing spatial evidence instead of being fabricated into a valid location.
 
 C. Project / RERA GPS
 
@@ -124,9 +119,9 @@ Recorded in `correlate_sensor_data()`:
 
 - timestamp difference threshold is exactly `30.0 seconds`
 - `parse_iso_timestamp()` is used for both phone and sensor timestamps
-- timestamp missing / malformed data is not always fatal; the code attempts a fallback by using `datetime.now(timezone.utc)` in `parse_iso_timestamp()` if conversion fails.
+- timestamp missing / malformed data returns `None` rather than inventing a current timestamp during the correlation gate.
 
-This means the code currently has a basic threshold and fallback but not a strong validation pipeline for all sources.
+This means the code currently has a basic threshold and strict parse validation rather than a silent timestamp fabrication path.
 
 # 9. Actual Scoring
 
@@ -228,14 +223,14 @@ CURRENT:
 - Cirrascale/AISuite cloud AI provider
 - NPU/local Quick engine optionally available
 - MCP mock RERA adapter
-- DummySensorAdapter
-- Hardcoded fallback longitude/latitude in correlation
+- DummySensorAdapter with explicit simulated provenance
+- Missing sensor coordinates treated as missing evidence, not hardcoded production coordinates
 - Rule-based development scoring
 
 FUTURE:
 
-- OpenRouter primary cloud AI provider
-- Ollama local/offline fallback
+- OpenRouter primary cloud AI provider (planned future path)
+- Ollama local/offline fallback (planned future path)
 - Real sensor and project source integration
 - Confidence-aware evidence fusion and reliability engine
 - Contradiction detection and evidence consistency pipeline

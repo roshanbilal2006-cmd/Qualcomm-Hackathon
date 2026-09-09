@@ -1,8 +1,13 @@
 import asyncio
 
+import pytest
+
 from mcp.adapters.sensor.dummy_sensor_adapter import DummySensorAdapter
+from mcp.adapters.rera.live_rera_adapter import LiveRERAAdapter
+from mcp.utils.exceptions import RERAUnavailableError
 from backend.adapters.ai_adapter import AIAdapter
 from backend.fusion.correlation import parse_iso_timestamp, correlate_sensor_data
+from backend.fusion.scoring import calculate_development_score
 
 
 def test_ai_adapter_unavailable_fallback_is_provider_neutral_and_has_empty_embedding(monkeypatch):
@@ -72,3 +77,31 @@ def test_invalid_timestamp_prevents_temporal_correlation():
         )
         is False
     )
+
+
+def test_live_rera_unavailable_path_never_becomes_mock():
+    adapter = LiveRERAAdapter(base_url=None, api_key=None)
+
+    assert adapter.get_status() == "unavailable"
+
+    with pytest.raises(RERAUnavailableError, match="not yet configured"):
+        adapter.get_all()
+
+    with pytest.raises(RERAUnavailableError, match="not yet configured"):
+        adapter.get_by_id("RERA-KA-00123")
+
+
+def test_crowdsourced_environmental_data_stays_distinct_from_physical_sensor_evidence():
+    score = calculate_development_score(
+        visual_stage="Finishing",
+        progress=50.0,
+        visual_confidence=0.87,
+        sensor_status="crowdsourced",
+        noise_db=75.0,
+        dust_pm25=50.0,
+        dust_pm10=40.0,
+        rera_projects=[],
+    )
+
+    assert "Sensor evidence is not physical hardware telemetry" in score["summary"]
+    assert "High noise and dust telemetry confirms active physical development" not in score["summary"]

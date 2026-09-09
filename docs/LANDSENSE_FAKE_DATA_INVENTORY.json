@@ -38,25 +38,25 @@
   {
     "file": "backend/pipeline/orchestrator.py",
     "symbol": "ObservationPipeline.execute",
-    "data_type": "hardcoded geographic fallback coordinates",
-    "fake_mechanism": "hardcoded fallback coordinates 12.9716 and 77.7500",
-    "source_of_value": "sensor_data.get('latitude', 12.9716) and sensor_data.get('longitude', 77.7500)",
+    "data_type": "missing sensor coordinates",
+    "fake_mechanism": "missing coordinates remain missing and correlation must fail rather than generating a fabricated location",
+    "source_of_value": "sensor_data.get('latitude') and sensor_data.get('longitude')", 
     "downstream_path": ["backend/fusion/correlation.py", "correlate_sensor_data()", "development_score"],
-    "affects_final_score": true,
-    "affects_user_output": true,
-    "replacement_needed": true,
-    "notes": "These are hardcoded geographic fallback coordinates used to evaluate whether sensor records correlate with the user site"
+    "affects_final_score": false,
+    "affects_user_output": false,
+    "replacement_needed": false,
+    "notes": "Current Phase 1 corrective behavior: missing coordinates are treated as missing spatial evidence and never converted into a hardcoded real-world location"
   },
   {
     "file": "backend/adapters/ai_adapter.py",
     "symbol": "AIAdapter.predict",
-    "data_type": "fallback AI output",
-    "fake_mechanism": "service unavailable fallback returns an explicit unknown visual result",
+    "data_type": "AI unavailable fallback",
+    "fake_mechanism": "provider-neutral explicit fallback with empty vector list",
     "source_of_value": "AI service unavailable error path in backend adapter",
     "downstream_path": ["backend/pipeline/orchestrator.py", "calculate_development_score()", "ObservationResponse"],
-    "affects_final_score": true,
-    "affects_user_output": true,
-    "replacement_needed": true,
-    "notes": "A hardcoded Unknown stage/progress/confidence result can be sent down the score pipeline if the AI service is down"
+    "affects_final_score": false,
+    "affects_user_output": false,
+    "replacement_needed": false,
+    "notes": "The corrected Phase 1 fallback returns a neutral Unknown stage/progress/confidence description with embedding=[] and without fabricating an AI vector or naming an OpenRouter provider"
   }
 ]

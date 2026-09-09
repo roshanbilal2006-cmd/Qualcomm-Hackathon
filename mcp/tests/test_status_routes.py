@@ -20,7 +20,7 @@ def test_status_endpoint_contract_shape():
     data = response.json()
 
     assert set(data.keys()) == {"arduino", "sensor_mode", "rera_mode", "mcp"}
-    assert data["arduino"] in {"connected", "disconnected"}
+    assert data["arduino"] in {"connected", "disconnected", "simulated"}
     assert data["sensor_mode"] in {"demo", "live"}
     assert data["rera_mode"] in {"mock", "live"}
     assert data["mcp"] in {"healthy", "degraded"}
@@ -32,4 +32,4 @@ def test_status_endpoint_reflects_default_demo_mock_config():
 
     assert data["sensor_mode"] == "demo"
     assert data["rera_mode"] == "mock"
-    assert data["arduino"] == "connected"
+    assert data["arduino"] == "simulated"

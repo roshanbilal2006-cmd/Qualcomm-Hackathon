@@ -27,9 +27,8 @@ def test_rera_endpoint_full_project_shape():
     data = response.json()
 
     for project in data:
-        assert set(project.keys()) == {
-            "id", "name", "builder", "status", "distance"
-        }
+        assert {"id", "name", "builder", "status", "distance"}.issubset(project.keys())
+        assert {"source", "data_origin"}.issubset(project.keys())
 
 
 def test_rera_endpoint_valid_status_values():

@@ -54,23 +54,23 @@ API response
 
 The mock RERA project data can affect the score by adding +15 for approved nearby project status, subtracting 30 for disputed or unauthorized statuses, and adding warnings when no RERA project exists.
 
-## 3. Hardcoded Sensor Coordinates
+## 3. Missing Sensor Coordinates
 
 ```
-Hardcoded fallback coordinates 12.9716, 77.7500
+missing latitude/longitude
    ↓
 backend/pipeline/orchestrator.py
    ↓
-used by correlate_sensor_data()
+correlate_sensor_data()
    ↓
-correlation boolean gate
+correlation boolean gate fails
    ↓
-noise_db/pm25/pm10 values become allowed or ignored
+noise_db/pm25/pm10 values do not become physically correlated evidence
    ↓
 scoring visible in development_score
 ```
 
-The fallback coordinates are used when the sensor data lacks latitude/longitude fields. This influences the correlation gate and therefore the downstream scoring path.
+When sensor latitude or longitude fields are absent, the pipeline now leaves those coordinate values missing and correlation returns `False` instead of inventing a geographic match from a hardcoded location.
 
 ## 4. AI fallback
 
@@ -79,11 +79,13 @@ AI service unavailable
    ↓
 backend/adapters/ai_adapter.py
    ↓
-Unknown visual result default
+explicit unknown visual result default
    ↓
 orchestrator pipeline stores Unknown stage/progress/confidence
+   ↓
+empty embedding list means embedding unavailable
    ↓
 back-end scoring and output
 ```
 
-If the AI service is not reachable, the adapter returns a `description` string from the fallback `OpenRouter/OpenCV AI service unavailable; visual construction evidence was not verified.` That fallback path is a hardcoded output, not a real AI result.
+If the AI service is not reachable, the adapter returns a provider-neutral `description` string (`Current AI service unavailable; visual construction evidence was not verified.`) and an `embedding: []` payload. This does not fabricate an AI vector or impersonate any provider such as OpenRouter.
