@@ -55,31 +55,42 @@ class ObservationPipeline:
             sensor_data = await self.mcp_adapter.get_sensor_data(latitude=input_data.latitude, longitude=input_data.longitude)
         
         # Step 5: Correlation Engine Checks
-        # The sensor node reports its coordinates (either hardcoded or dynamic)
-        sensor_lat = sensor_data.get("latitude", 12.9716)
-        sensor_lon = sensor_data.get("longitude", 77.7500)
-        
+        # Missing sensor coordinates must stay missing and cannot be replaced
+        # with any hardcoded real-world location.
+        sensor_lat = sensor_data.get("latitude")
+        sensor_lon = sensor_data.get("longitude")
+
         is_correlated = correlate_sensor_data(
             phone_lat=input_data.latitude,
             phone_lon=input_data.longitude,
             phone_timestamp_str=input_data.timestamp,
             sensor_data=sensor_data,
             sensor_lat=sensor_lat,
-            sensor_lon=sensor_lon
+            sensor_lon=sensor_lon,
         )
 
         noise_db = None
         pm25 = None
         pm10 = None
         sensor_status = "degraded"
+        sensor_source = sensor_data.get("sensor_source") or sensor_data.get("data_origin") or "unknown"
+        rera_source = "unknown"
 
         if is_correlated:
             noise_db = sensor_data.get("noise_db")
             pm25 = sensor_data.get("pm25")
             pm10 = sensor_data.get("pm10")
-            sensor_status = "connected" if any(value is not None for value in (noise_db, pm25, pm10)) else "degraded"
+            if sensor_source == "dummy" or sensor_data.get("data_origin") == "simulated":
+                sensor_status = "simulated"
+            elif any(value is not None for value in (noise_db, pm25, pm10)):
+                sensor_status = "connected"
+            else:
+                sensor_status = "degraded"
+
             if sensor_status == "connected":
                 logger.info("IoT sensor data correlated successfully via MCP.")
+            elif sensor_status == "simulated":
+                logger.warning("A simulated dummy sensor payload was correlated; it remains identifiable as simulated and is not physical hardware evidence.")
             else:
                 logger.info("No dust/noise telemetry supplied with observation.")
         else:
@@ -89,19 +100,23 @@ class ObservationPipeline:
         rera_projects = await self.mcp_adapter.get_nearby_projects(
             latitude=input_data.latitude,
             longitude=input_data.longitude,
-            radius_meters=500.0
+            radius_meters=500.0,
         )
         logger.info(f"MCP RERA lookup found {len(rera_projects)} projects within 500m.")
+        if rera_projects:
+            rera_source = "mock" if rera_projects and all(project.get("source") == "mock" for project in rera_projects) else "unknown"
 
-        # Crowdsourcing Fallback: if no valid live sensor data, use crowdsourced/historical values from RERA DB
+        # Crowdsourcing fallback: preserve the fallback semantics but label it
+        # explicitly as crowdsourced/external rather than a physical sensor.
         if sensor_status != "connected" and rera_projects:
             for project in rera_projects:
                 if project.get("noise_db") or project.get("dust_pm25") or project.get("dust_pm10"):
                     noise_db = project.get("noise_db")
                     pm25 = project.get("dust_pm25")
                     pm10 = project.get("dust_pm10")
-                    sensor_status = "connected (crowdsourced)"
-                    logger.info(f"Using crowdsourced sensor fallback from nearby project: {project.get('name')}")
+                    sensor_status = "crowdsourced"
+                    sensor_source = "crowdsourced"
+                    logger.info(f"Using crowdsourced/external environmental fallback from nearby project: {project.get('name')}")
                     break
 
         # Step 7: Perform Data Fusion & Scoring
@@ -135,6 +150,9 @@ class ObservationPipeline:
             "dust_pm25": pm25 if sensor_status == "connected" else None,
             "dust_pm10": pm10 if sensor_status == "connected" else None,
             "sensor_status": sensor_status,
+            "sensor_source": sensor_source,
+            "data_origin": sensor_source,
+            "rera_source": rera_source,
             "rera_projects": rera_projects,
             "development_score": fusion_result.get("development_score", 0.0),
             "summary": summary,

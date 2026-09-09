@@ -36,6 +36,9 @@ class ObservationResponse(BaseModel):
     dust_pm25: Optional[float] = None
     dust_pm10: Optional[float] = None
     sensor_status: str = "degraded"
+    sensor_source: str = "unknown"
+    data_origin: str = "unknown"
+    rera_source: str = "unknown"
     rera_projects: List[ReraProjectSchema] = Field(default_factory=list)
     development_score: float = 0.0
     summary: str = ""

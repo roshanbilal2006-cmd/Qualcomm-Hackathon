@@ -12,6 +12,8 @@ class SensorReading(BaseModel):
     noise_db: float = Field(..., ge=40, le=90, examples=[72.4])
     pm25: float = Field(..., ge=10, le=100, examples=[38.1])
     pm10: float = Field(..., ge=20, le=150, examples=[61.7])
+    sensor_source: str = Field(default="unknown")
+    data_origin: str = Field(default="unknown")
 
 
 class SensorOfflineResponse(BaseModel):

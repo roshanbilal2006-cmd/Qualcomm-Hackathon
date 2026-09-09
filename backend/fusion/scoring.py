@@ -57,7 +57,7 @@ def calculate_development_score(
     # 2. IoT Sensor Fusion (if active)
     mismatch = False
     environmental_hazard = False
-    
+
     if sensor_status == "connected":
         has_noise = noise_db is not None
         has_pm25 = dust_pm25 is not None
@@ -67,7 +67,7 @@ def calculate_development_score(
         if has_visual_construction and has_noise and has_pm25 and noise_db > 70.0 and dust_pm25 > 40.0:
             base_score += 10.0
             reasoning_steps.append("High noise and dust telemetry confirms active physical development (+10 pts)")
-        
+
         # Mismatch check: Visual progress says active construction but sensors are completely silent
         if has_visual_construction and progress > 10.0 and progress < 90.0 and has_noise and noise_db < 50.0:
             mismatch = True
@@ -75,7 +75,7 @@ def calculate_development_score(
             reasoning_steps.append("Mismatch: visual construction is in-progress but noise levels are extremely quiet (-15 pts)")
         if not has_visual_construction and ((has_noise and noise_db > 70.0) or (has_pm25 and dust_pm25 > 40.0)):
             reasoning_steps.append("Sensor activity is present, but visual analysis did not verify a construction site")
-        
+
         # Environmental Hazard
         if (
             (has_noise and noise_db > 85.0)
@@ -86,6 +86,8 @@ def calculate_development_score(
             reasoning_steps.append("Environmental warning: excessive noise or PM particulate levels measured at site")
         if not has_noise and not has_pm25 and not has_pm10:
             reasoning_steps.append("No dust/noise readings were supplied; environmental telemetry was not used")
+    elif sensor_status in {"simulated", "crowdsourced", "unavailable", "degraded", "disconnected"}:
+        reasoning_steps.append("Sensor evidence is not physical hardware telemetry; scoring relies purely on visual and RERA records")
     else:
         reasoning_steps.append("IoT sensor offline or un-correlated; scoring relies purely on visual and RERA records")
 

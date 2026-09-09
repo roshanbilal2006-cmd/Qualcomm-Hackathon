@@ -20,9 +20,11 @@ class DummySensorAdapter(SensorProvider):
             "noise_db": round(random.uniform(40, 90), 1),
             "pm25": round(random.uniform(10, 100), 1),
             "pm10": round(random.uniform(20, 150), 1),
+            "sensor_source": "dummy",
+            "data_origin": "simulated",
         }
 
     def get_status(self) -> str:
-        # Dummy source is always "connected" - it has no external
-        # dependency that can fail.
-        return "connected"
+        # Dummy source is explicitly simulated and must not masquerade
+        # as a live physical hardware device.
+        return "simulated"

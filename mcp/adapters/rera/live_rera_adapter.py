@@ -3,11 +3,9 @@ Live RERA adapter - stub for future integration with the live
 Karnataka RERA data source (or other government API).
 Used when RERA_MODE=live. Implements the RERAProvider interface.
 
-NOT YET FUNCTIONAL: raises RERAUnavailableError until a real
-base_url and api_key are configured and the actual request/parsing
-logic below is implemented. This file exists so the interface,
-factory, and all consuming services/routes require zero changes
-when live integration is ready - only this file's body changes.
+This adapter remains intentionally non-functional in Phase 1. If no
+LIVE_RERA_BASE_URL is configured, it must report a clear unavailable
+state and never silently substitute a mock or synthetic provider.
 """
 
 import logging
@@ -29,7 +27,8 @@ class LiveRERAAdapter(RERAProvider):
         if not self._base_url:
             raise RERAUnavailableError(
                 "Live RERA integration is not yet configured "
-                "(LIVE_RERA_BASE_URL is not set)"
+                "(LIVE_RERA_BASE_URL is not set). "
+                "No silent fallback to mock RERA is allowed."
             )
 
         try:
@@ -48,7 +47,8 @@ class LiveRERAAdapter(RERAProvider):
         if not self._base_url:
             raise RERAUnavailableError(
                 "Live RERA integration is not yet configured "
-                "(LIVE_RERA_BASE_URL is not set)"
+                "(LIVE_RERA_BASE_URL is not set). "
+                "No silent fallback to mock RERA is allowed."
             )
 
         try:
@@ -66,7 +66,7 @@ class LiveRERAAdapter(RERAProvider):
             raise RERAUnavailableError(f"Live RERA source unreachable: {exc}") from exc
 
     def get_status(self) -> str:
-        return "live" if self._base_url else "live (unconfigured)"
+        return "unavailable" if not self._base_url else "live"
 
     def _auth_headers(self) -> dict:
         if self._api_key:

@@ -1,6 +1,9 @@
 """
 Mock RERA adapter - serves RERA project data from a local JSON file.
 Used when RERA_MODE=mock. Implements the RERAProvider interface.
+
+The mock dataset is intentionally testable and must stay identifiable as
+mock, not a verified or live government project source.
 """
 
 import json
@@ -40,6 +43,10 @@ class MockRERAAdapter(RERAProvider):
             raise RERAUnavailableError(
                 f"Mock RERA dataset at {self._data_path} must be a JSON array"
             )
+
+        for project in data:
+            project.setdefault("source", "mock")
+            project.setdefault("data_origin", "mock")
 
         self._cache = data
         return self._cache
