@@ -1,0 +1,22 @@
+[
+  {
+    "barrier_uncertainty_db": 3.0,
+    "error_reduction_advantage_ug_s": 20.04
+  },
+  {
+    "barrier_uncertainty_db": 6.0,
+    "error_reduction_advantage_ug_s": 15.58
+  },
+  {
+    "barrier_uncertainty_db": 10.0,
+    "error_reduction_advantage_ug_s": 28.57
+  },
+  {
+    "barrier_uncertainty_db": 15.0,
+    "error_reduction_advantage_ug_s": 11.81
+  },
+  {
+    "barrier_uncertainty_db": 20.0,
+    "error_reduction_advantage_ug_s": 11.81
+  }
+]

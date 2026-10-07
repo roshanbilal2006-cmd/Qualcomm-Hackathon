@@ -1,0 +1,27 @@
+{
+  "n_seeds": 30,
+  "mean_true_q_ug_s": 713.4,
+  "baseline_fixed_prior": {
+    "rmse_mean": 612.54,
+    "rmse_std": 30.07,
+    "nrmse_pct": 85.9
+  },
+  "baseline_random_view": {
+    "rmse_mean": 598.12,
+    "rmse_std": 31.93,
+    "nrmse_pct": 83.8,
+    "captures_mean": 3.0
+  },
+  "proposed_dit_doe": {
+    "rmse_mean": 597.36,
+    "rmse_std": 30.37,
+    "nrmse_pct": 83.7,
+    "captures_mean": 2.0
+  },
+  "hypothesis_testing": {
+    "proposed_vs_fixed_p_value": 2.855883661625467e-10,
+    "proposed_vs_fixed_statistically_significant": true,
+    "proposed_vs_random_p_value": 0.7621585643548752,
+    "proposed_vs_random_statistically_significant": false
+  }
+}

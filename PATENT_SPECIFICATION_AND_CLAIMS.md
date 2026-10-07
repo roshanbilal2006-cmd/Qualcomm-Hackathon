@@ -1,148 +1,109 @@
-# Patent Specification & Formal Claim Tree
+# Patent Specification & Formal Claim Tree (Remediated Revision 2.0)
 
-**Title:** DUAL-RATE CYBER-PHYSICAL SYSTEM AND METHOD FOR CLOSED-LOOP STRUCTURAL AND ENVIRONMENTAL MONITORING VIA INFORMATION-THEORETIC DIRECTED VIEW PLANNING
+**Title:** CROSS-MODAL CYBER-PHYSICAL SYSTEM AND METHOD FOR ESTIMATING LAND DEVELOPMENT EMISSIONS VIA MULTI-CHANNEL PHYSICAL BARRIER RECALIBRATION
 
 ---
 
 ## Technical Field
 
-The present disclosure relates generally to the technical fields of cyber-physical systems, recursive state estimation, environmental sensing, and active computer vision. More particularly, the disclosure relates to a closed-loop system and method for estimating non-stationary emission rates, structural development milestones, and physical perimeter shielding parameters at a construction or land development site by coupling continuous stationary telemetry with episodic mobile visual sensing steered by Fisher Information view planning.
+The present disclosure relates generally to the technical fields of cyber-physical systems, recursive state estimation, environmental sensing, and active computer vision. More particularly, the disclosure relates to a closed-loop system and method for estimating non-stationary source emissions at a land development or construction site by maintaining a state estimate that couples acoustic wave propagation and atmospheric particulate transport via a shared physical barrier attenuation parameter, resolving said parameter from optical image classification of the perimeter structure, and recalibrating subsequent multi-modal inversion of stationary perimeter sensors.
 
 ---
 
-## Background of the Invention
+## Background & Deficiencies of Prior Art
 
-Perimeter environmental monitoring around urban construction sites is critical for public health, regulatory compliance, and worker safety. Conventional monitoring architectures generally fall into two disconnected categories:
-1. **Stationary Environmental Loggers:** Fixed sensor stations positioned along site boundaries continuously record sound pressure levels (dBA) and airborne particulate concentrations ($\text{PM}_{2.5}$, $\text{PM}_{10}$). However, stationary boundary sensors suffer from a fundamental **Spatial Observability Deficit**: a scalar reading is a complex convolution of source emission intensity, source distance, wind advection vectors, and non-line-of-sight physical barrier attenuation (e.g., perimeter hoardings, boundary walls, and earth berms). A single stationary sensor cannot mathematically decouple these variables, leading to frequent false alarms or undetected violations.
-2. **Episodic Visual Surveying:** Drones or handheld mobile devices capture high-resolution images to assess structural progress. However, visual capture requires significant human labor, battery consumption, and compute bandwidth on edge neural processors. Operating visual cameras continuously is computationally and logistically prohibitive.
+Perimeter environmental monitoring around urban construction sites is critical for public health, municipal regulatory compliance, and worker safety. 
 
-Prior art systems fail to provide a closed-loop mechanism linking continuous physical telemetry with episodic visual sensing. Consequently, existing systems either waste extensive resources capturing redundant, unguided photographs from occluded vantage points or rely on uncalibrated, drifting stationary sensors that misrepresent true site emissions. There exists an acute technical need for a closed-loop cyber-physical system that dynamically steers mobile visual observers based on physical information gain to resolve environmental boundary parameters and recalibrate stationary sensor models.
+Existing solutions suffer from fundamental architectural and mathematical deficiencies:
+1. **The Spatial Observability Deficit of Stationary Sensing:** Fixed sensor stations positioned along site boundaries continuously record sound pressure levels (dBA) and airborne particulate concentrations ($\text{PM}_{2.5}$, $\text{PM}_{10}$). However, as proven by rank analysis of the measurement Jacobian, a stationary boundary node measuring scalar acoustic and particulate values is strictly **rank-deficient (observability rank 2 out of 5)**. An infinite manifold of source emission rates $Q_{\text{emit}}$, source distances $r$, and physical perimeter barrier attenuation values $A_{\text{barrier}}$ produce identical scalar readings.
+2. **Domain Siloing:** Prior art environmental monitors (e.g. ISO 9613-2 noise mapping, Gaussian plume inversion) treat perimeter barriers as fixed, uncalibrated static assumptions. Conversely, construction computer vision systems use mobile or drone imagery purely for photogrammetry, semantic segmentation, or progress tracking against BIM/CAD models, with zero coupling to physical transport phenomena.
+3. **The Inverse Dispersion Failure Mode:** In practical urban settings, perimeter hoardings (corrugated steel, timber, acoustic curtains) attenuate acoustic energy by $5\text{--}25\,\text{dB}$ and intercept $30\text{--}80\%$ of fugitive dust. When a stationary monitor detects quiet or clean readings, prior art systems misclassify active construction as stalled. Conversely, when wind meanders around barrier edges, false alarms are triggered. Prior art lacks any mechanism that uses an optical image as a direct transducer measurement of a physical transport barrier parameter shared across multiple physical sensing channels.
 
 ---
 
 ## Summary of the Invention
 
-The present disclosure addresses the deficiencies of the prior art by providing a **Dual-Rate Information-Theoretic Directed Observation Engine (DIT-DOE)**.
-
-In one embodiment, a computer-implemented method comprises:
-1. Receiving a continuous stream of environmental telemetry (acoustic sound pressure level and particulate concentration) from at least one stationary sensor node positioned at a perimeter boundary.
-2. Recursively updating a state estimate vector $\hat{\mathbf{x}}_t$ and state error covariance matrix $\mathbf{P}_t$ in a state estimator using non-linear forward physical models of acoustic spherical divergence and 2D atmospheric advection-diffusion, wherein the state vector includes source spatial coordinates $(x_s, y_s)$, source emission rate $Q_{\text{emit}}$, perimeter barrier attenuation $A_{\text{barrier}}$, and structural progress percentage $S_{\text{progress}}$.
-3. Evaluating an information deficit criterion over a spatial/structural subspace of the covariance matrix.
-4. Upon satisfying the information deficit criterion, evaluating a Fisher Information Matrix (FIM) over a plurality of candidate boundary inspection poses $p = (x_c, y_c, \theta_c)$ and identifying an optimal inspection pose $p^*$ that maximizes a D-optimality objective function penalizing observer transit cost.
-5. Transmitting a directed inspection instruction to an episodic mobile device commanding physical acquisition of an optical image at the optimal inspection pose $p^*$.
-6. Ingesting targeted visual features extracted from the optical image, updating the state estimator to resolve the physical barrier attenuation parameter $A_{\text{barrier}}$ and source coordinates, thereby collapsing the covariance matrix; and
-7. Recalibrating the forward physical model of the stationary sensor node using the resolved barrier attenuation parameter, enabling accurate subsequent continuous source emission inversion without requiring additional optical images.
+The present disclosure solves the observability deficit and unifies disjoint sensing domains through a **Cross-Modal Parameter Coupling Engine**:
+1. A stationary node streams continuous acoustic sound-pressure and particulate-concentration measurements.
+2. A state estimator maintains a continuous latent state vector $\mathbf{x} = [x_s, y_s, Q_{\text{emit}}, A_{\text{barrier}}, S_{\text{progress}}]^T$, wherein a **single shared physical barrier-attenuation parameter $A_{\text{barrier}}$ enters both an acoustic spherical divergence model and a 2D atmospheric particulate transport model**.
+3. When uncertainty in the barrier parameter exceeds a threshold, an instruction is transmitted to a mobile device commanding acquisition of an optical image of the perimeter barrier structure.
+4. An optical classifier determines from the image a physical barrier material class, an effective barrier height, or a perforation ratio, and computes a physical insertion loss using a diffraction formulation (e.g., Maekawa Fresnel number).
+5. The state estimator ingests the optical measurement, **restoring the system to full observability rank (rank 5/5)** and collapsing the error covariance matrix.
+6. The updated barrier parameter is applied to recalibrate the acoustic and particulate models, enabling accurate subsequent inversion of the stationary sensor node without requiring continuous image acquisition.
 
 ---
 
-## Brief Description of the Drawings
+## Formal Patent Claims Tree
 
-- **FIG. 1** illustrates the cyber-physical system architecture, showing the interaction between the physical construction site, the stationary IoT node, the edge computing device, and the directed mobile observer.
-- **FIG. 2** is a schematic diagram of the closed-loop perception and recalibration cycle.
-- **FIG. 3** depicts the geometric line-of-sight view-planning model evaluated along site boundary sidewalks.
-- **FIG. 4** is a flowchart of the recursive dual-rate Extended Kalman Filter and Fisher Information dispatch routine.
-- **FIG. 5** is a comparative graph illustrating emission rate estimation error across baselines and the proposed method.
-- **FIG. 6** illustrates the empirical covariance collapse upon receiving targeted visual feedback.
-
----
-
-## Detailed Description of the Preferred Embodiments
-
-### 1. Mathematical State-Space Formulation
-The latent state vector $\mathbf{x} \in \mathbb{R}^5$ is modeled in discrete time $k$ as:
-$$\mathbf{x}_k = \begin{bmatrix} x_{s,k} \\ y_{s,k} \\ Q_{\text{emit},k} \\ A_{\text{barrier},k} \\ S_{\text{progress},k} \end{bmatrix}$$
-
-The continuous-time state transition equation is:
-$$\mathbf{x}_{k+1} = \mathbf{x}_k + \mathbf{f}(\mathbf{x}_k)\Delta t + \mathbf{w}_k$$
-where $\mathbf{w}_k \sim \mathcal{N}(\mathbf{0}, \mathbf{Q}_{\text{proc}})$, with process noise covariance:
-$$\mathbf{Q}_{\text{proc}} = \operatorname{diag}(\sigma_{pos}^2, \sigma_{pos}^2, \sigma_Q^2, \sigma_{barrier}^2, \sigma_{prog}^2)$$
-
-### 2. Forward Physical Observation Models
-The stationary IoT telemetry vector $\mathbf{z}_{\text{iot}} = [L_{p,\text{meas}}, C_{\text{PM2.5},\text{meas}}]^T$ is modeled via non-linear observation equations:
-$$L_p = L_w(Q) - 20\log_{10}\left(\sqrt{(x_{\text{node}} - x_s)^2 + (y_{\text{node}} - y_s)^2}\right) - 11 - A_{\text{barrier}} - A_{\text{air}}$$
-$$C_{\text{PM2.5}} = C_{\text{ambient}} + \frac{0.35 \cdot Q_{\text{emit}}}{2\pi \|\mathbf{u}\| \sigma_y(x) \sigma_z(x)} \exp\left(-\frac{y_{\text{crosswind}}^2}{2\sigma_y(x)^2}\right) \cdot (1 - \eta_{\text{barrier}}(A_{\text{barrier}}))$$
-where:
-$$\eta_{\text{barrier}}(A_{\text{barrier}}) = \min(0.8, 0.04 \cdot A_{\text{barrier}})$$
-
-### 3. Fisher Information View Planning
-For each candidate pose $p = (x_c, y_c, \theta_c) \in \mathcal{P}$:
-1. Compute geometric distance $d = \|\mathbf{x}_c - \hat{\mathbf{x}}_s\|$ and line-of-sight bearing $\phi = \operatorname{atan2}(\hat{y}_s - y_c, \hat{x}_s - x_c)$.
-2. Evaluate geometric Field-of-View attenuation factor:
-   $$\text{FOV}(p) = \max\left(0.05, \cos\left(\min\left(\frac{\pi}{2}, |\theta_c - \phi|\right)\right)\right) \cdot \min\left(1.0, \frac{r_{\text{site}}}{d}\right)$$
-3. Compute the observation Jacobian $\mathbf{H}_{\text{vis}}(p)$ and dynamic observation covariance $\mathbf{R}_{\text{vis}}(p)$.
-4. Construct the Fisher Information Matrix:
-   $$\mathbf{F}(p) = \mathbf{H}_{\text{vis}}(p)^T \mathbf{R}_{\text{vis}}(p)^{-1} \mathbf{H}_{\text{vis}}(p)$$
-5. Solve the constrained D-optimality objective:
-   $$p^* = \arg\max_{p \in \mathcal{P}} \left[ \log \det\left(\mathbf{P}_k^{-1} + \mathbf{F}(p)\right) - \lambda_{\text{travel}} \cdot \|\mathbf{x}_{\text{user}} - \mathbf{x}_p\| \right]$$
-
----
-
-## Patent Claims Tree
-
-### Claim 1 (Independent Method Claim)
+### Claim 1 (Independent Method Claim - Core Cross-Modal Parameterization)
 A computer-implemented method for closed-loop cyber-physical monitoring of a land development site, comprising:
-1. receiving, by at least one processor, a continuous stream of environmental telemetry from at least one stationary sensor node positioned along a perimeter boundary of the site, wherein the environmental telemetry comprises acoustic sound pressure measurements and particulate matter concentration measurements;
-2. recursively updating, by the at least one processor, a state vector $\hat{\mathbf{x}}_t$ and an error covariance matrix $\mathbf{P}_t$ in a state estimator using a non-linear forward physical model parameterizing source spatial coordinates, a source emission flux, and a physical perimeter barrier attenuation parameter;
-3. evaluating an information deficit criterion over a subspace of the error covariance matrix;
-4. upon satisfaction of the information deficit criterion, evaluating a Fisher Information Matrix over a plurality of candidate boundary observation poses and selecting an optimal observation pose that maximizes a multi-objective information-gain function penalizing physical observer transit distance;
-5. transmitting an inspection instruction to an episodic mobile device commanding acquisition of an optical image at the optimal observation pose;
-6. receiving targeted visual features extracted from the optical image acquired at the optimal observation pose and executing a visual measurement update in the state estimator to resolve the physical perimeter barrier attenuation parameter and collapse the error covariance matrix; and
-7. recalibrating the non-linear forward physical model of the stationary sensor node using the resolved physical perimeter barrier attenuation parameter, wherein subsequent continuous telemetry from the stationary sensor node is inverted to estimate the source emission flux without requiring additional optical images.
+1. receiving, by at least one processor, acoustic sound-pressure measurements and particulate-matter concentration measurements from at least one stationary sensor node positioned along a perimeter of the site;
+2. maintaining, by the at least one processor, a state estimate in a recursive state estimator, wherein the state estimate comprises an emission source location, a source emission rate, and **a single shared barrier-attenuation parameter characterizing a perimeter barrier structure situated between the emission source and the at least one stationary sensor node, said shared barrier-attenuation parameter entering both an acoustic propagation model and an atmospheric particulate transport model of the state estimator**;
+3. determining that an estimation uncertainty of said shared barrier-attenuation parameter in the state estimator satisfies an update criterion;
+4. in response to satisfying the update criterion, transmitting an instruction to a mobile client device commanding acquisition of an optical image of the perimeter barrier structure from an observation pose selected from a plurality of candidate poses;
+5. **determining from the acquired optical image a physical material classification or a geometric dimension of the perimeter barrier structure, and updating said shared barrier-attenuation parameter and its estimation uncertainty in the state estimator therewith**; and
+6. **applying the updated shared barrier-attenuation parameter to both the acoustic propagation model and the atmospheric particulate transport model to recalibrate subsequent multi-modal inversion of incoming measurements from the at least one stationary sensor node to determine the source emission rate.**
 
-### Claim 2 (Dependent Claim - Barrier Model)
-The method of claim 1, wherein the non-linear forward physical model calculates acoustic attenuation according to spherical wave spreading combined with an insertion loss term corresponding to the physical perimeter barrier attenuation parameter, and calculates particulate matter concentration according to a two-dimensional atmospheric advection-diffusion equation modulated by a barrier filtration efficiency function parameterized by the physical perimeter barrier attenuation parameter.
+### Claim 2 (Dependent Claim - Maekawa Fresnel Number Diffraction Coupling)
+The method of claim 1, wherein determining the shared barrier-attenuation parameter from the acquired optical image comprises:
+1. classifying a physical material of the barrier structure from the optical image into one of a plurality of predetermined material categories comprising solid concrete, corrugated steel, timber hoarding, acoustic quilt, and perforated netting;
+2. estimating an effective barrier height $h$ from the optical image;
+3. computing a Fresnel diffraction number $N = \frac{2}{\lambda}(\sqrt{d_1^2 + h^2} + \sqrt{d_2^2 + h^2} - (d_1 + d_2))$, wherein $\lambda$ is an acoustic wavelength of dominant mechanical machinery emissions, $d_1$ is a distance from the emission source to the barrier structure, and $d_2$ is a distance from the barrier structure to the stationary sensor node; and
+4. calculating an acoustic insertion loss $A_{\text{barrier}} = \min(L_{\text{mat}}, 10\log_{10}(3 + 20N))$, wherein $L_{\text{mat}}$ is a mass-law transmission loss limit associated with the classified physical material.
 
-### Claim 3 (Dependent Claim - D-Optimality)
-The method of claim 1, wherein the multi-objective information-gain function computes a D-optimality metric defined by the log-determinant of the sum of an inverse prior covariance matrix and the Fisher Information Matrix for each candidate boundary observation pose.
+### Claim 3 (Dependent Claim - Particulate Retention Coupling)
+The method of claim 2, wherein the atmospheric particulate transport model calculates downwind particulate concentration according to a two-dimensional Gaussian plume equation scaled by a barrier filtration efficiency $\eta_{\text{barrier}}$, wherein $\eta_{\text{barrier}}$ is a monotonic function of said acoustic insertion loss $A_{\text{barrier}}$ and a visual perforation ratio extracted from the optical image.
 
-### Claim 4 (Dependent Claim - Dynamic FOV Weighting)
-The method of claim 3, wherein evaluating the Fisher Information Matrix comprises dynamically scaling an observation noise covariance matrix inversely proportional to a geometric Field-of-View alignment factor between a camera optical axis of the candidate pose and a line-of-sight vector to an estimated emission epicenter.
+### Claim 4 (Dependent Claim - Uncertainty-Minimizing Observation Pose)
+The method of claim 1, wherein the observation pose is selected from the plurality of candidate poses along an accessible pedestrian perimeter by evaluating an expected reduction in the estimation uncertainty of the shared barrier-attenuation parameter penalized by a physical transit distance from a current location of the mobile client device.
 
-### Claim 5 (Dependent Claim - Subspace Trigger)
-The method of claim 1, wherein the information deficit criterion is evaluated by summing variances of the source spatial coordinates and the physical perimeter barrier attenuation parameter in the error covariance matrix, independent of emission flux variance.
+### Claim 5 (Dependent Claim - Fisher Information D-Optimality)
+The method of claim 4, wherein the expected reduction in estimation uncertainty is evaluated by computing a D-optimality metric comprising a log-determinant of a sum of an inverse prior covariance matrix and a Fisher Information Matrix calculated for each candidate pose, wherein observation noise in the Fisher Information Matrix scales inversely with a geometric line-of-sight Field-of-View alignment between the candidate pose and the perimeter barrier structure.
 
-### Claim 6 (Dependent Claim - Innovation Anomaly)
-The method of claim 1, further comprising evaluating an innovation residual vector between received stationary telemetry and predicted telemetry, and triggering selection of the optimal observation pose when a norm of the innovation residual vector exceeds an anomaly threshold.
+### Claim 6 (Dependent Claim - Observability Restoration)
+The method of claim 1, wherein prior to updating the shared barrier-attenuation parameter from the optical image, an observability matrix of the stationary sensor node alone exhibits a rank of 2 over a 5-dimensional state space, and wherein updating the shared barrier-attenuation parameter from the optical image restores the observability matrix to full rank 5.
 
-### Claim 7 (Dependent Claim - Cooldown Governor)
-The method of claim 1, further comprising enforcing a temporal cooldown interval between successive transmissions of inspection instructions, wherein inspection instructions are suppressed once the error covariance matrix collapses below a stability threshold.
+### Claim 7 (Dependent Claim - Cross-Modal Ratio Anomaly Detection)
+The method of claim 1, further comprising comparing a measured ratio of particulate concentration to acoustic sound pressure against a model-predicted ratio, and detecting an unmodeled physical opening or localized gate in the perimeter barrier structure when the measured ratio deviates from the predicted ratio by more than a threshold variance.
 
-### Claim 8 (Dependent Claim - Cross-Bearing Triangulation)
-The method of claim 1, wherein the targeted visual features extracted from the optical image comprise triangulated Cartesian coordinates of an active machinery epicenter and a visual barrier classification index.
+### Claim 8 (Dependent Claim - Innovation Residual Trigger)
+The method of claim 1, wherein the update criterion is satisfied when an innovation residual vector between received stationary measurements and predicted measurements exceeds an anomaly threshold, or when a trace of a spatial error covariance subspace exceeds an uncertainty threshold.
 
-### Claim 9 (Dependent Claim - Dual-Rate Sampling)
-The method of claim 1, wherein the continuous stream of environmental telemetry is ingested at a sample rate between $0.5\,\text{Hz}$ and $10\,\text{Hz}$, and wherein episodic optical images are acquired at an average frequency at least fifty times lower than the continuous telemetry sample rate.
+### Claim 9 (Dependent Claim - Micro-Meteorological Wind Coupling)
+The method of claim 1, further comprising ingesting real-time wind speed and wind direction vectors from a micro-meteorological feed, wherein the atmospheric particulate transport model dynamically rotates spatial dispersion axes parallel to the ingested wind direction vector.
 
-### Claim 10 (Dependent Claim - Atmospheric Wind Coupling)
-The method of claim 2, further comprising ingesting real-time wind speed and wind direction vectors from a micro-meteorological feed, wherein the advection-diffusion equation rotates spatial coordinate axes parallel to the ingested wind direction vector.
-
----
-
-### Claim 11 (Independent System Claim)
-A closed-loop cyber-physical monitoring system for a land development site, comprising:
-1. at least one stationary sensor node disposed at a perimeter boundary of the site, comprising an acoustic transducer and an optical particulate transducer configured to transmit continuous environmental telemetry;
-2. an episodic mobile observation client comprising an optical camera, a location receiver, an orientation sensor, and a wireless network interface;
-3. an edge computing system communicatively coupled to the at least one stationary sensor node and the episodic mobile observation client, comprising one or more processors and a memory storing instructions that, when executed, cause the one or more processors to:
-   - maintain a recursive state estimator tracking a continuous latent state vector comprising emission source coordinates, an emission rate, and a physical perimeter barrier attenuation parameter;
-   - update the recursive state estimator using incoming continuous environmental telemetry and a physical dispersion model;
-   - evaluate an information deficit metric over the recursive state estimator;
-   - upon detecting an information deficit, compute a Fisher Information Matrix across candidate boundary coordinates and dispatch a navigation waypoint commanding the episodic mobile observation client to capture an image at an optimal viewpoint;
-   - update the physical perimeter barrier attenuation parameter in the recursive state estimator based on visual features extracted from the captured image; and
-   - recalibrate the physical dispersion model in closed loop to invert subsequent telemetry from the stationary sensor node.
-
-### Claim 12 (Dependent Claim - Edge NPU Acceleration)
-The system of claim 11, wherein the edge computing system comprises a Neural Processing Unit (NPU), and wherein the visual features are extracted on the NPU using a quantized neural network.
-
-### Claim 13 (Dependent Claim - Serial Microcontroller Interface)
-The system of claim 11, wherein the at least one stationary sensor node comprises an Arduino-compatible microcontroller communicating with the edge computing system via a Universal Asynchronous Receiver-Transmitter (UART) serial interface.
-
-### Claim 14 (Dependent Claim - Acoustic Bandpass Filter)
-The system of claim 11, wherein the acoustic transducer comprises an electret microphone coupled to an analog comparator configured to isolate low-frequency impulsive mechanical sound pressure signatures between $10\,\text{Hz}$ and $50\,\text{Hz}$.
-
-### Claim 15 (Dependent Claim - Directional Arrow Guidance)
-The system of claim 11, wherein the episodic mobile observation client renders a graphical compass rose and a directional guidance vector pointing towards the optimal observation pose.
+### Claim 10 (Dependent Claim - Dynamic Cooldown Interval)
+The method of claim 1, further comprising enforcing a minimum temporal cooldown interval between successive transmissions of inspection instructions, wherein inspection instructions are suppressed once the estimation uncertainty of the shared barrier-attenuation parameter collapses below a stability threshold.
 
 ---
 
-### Claim 16 (Independent Non-Transitory Medium Claim)
+### Claim 11 (Independent Server-Only System Claim - Anti-Divided Infringement)
+A computing system for closed-loop cyber-physical monitoring of a land development site, comprising:
+one or more processors; and
+a memory storing instructions that, when executed by the one or more processors, cause the computing system to:
+1. receive, over a communication network, continuous acoustic sound-pressure measurements and particulate-matter concentration measurements generated by at least one stationary sensor node at a perimeter of the site;
+2. maintain a recursive state estimator tracking an emission source location, a source emission rate, and **a single shared barrier-attenuation parameter characterizing a perimeter barrier structure between the emission source and the stationary sensor node, said shared barrier-attenuation parameter entering both an acoustic propagation model and an atmospheric particulate transport model**;
+3. determine that an estimation uncertainty of said shared barrier-attenuation parameter exceeds a threshold;
+4. transmit, over the communication network, an instruction directing an external client device to capture an optical image of the perimeter barrier structure from a candidate pose selected to minimize barrier uncertainty;
+5. receive visual feature data extracted from the optical image;
+6. update the shared barrier-attenuation parameter in the recursive state estimator using the visual feature data; and
+7. recalibrate both the acoustic propagation model and the atmospheric particulate transport model using the updated shared barrier-attenuation parameter to determine the source emission rate from subsequent incoming measurements of the stationary sensor node.
+
+### Claim 12 (Dependent Claim - Edge NPU Visual Feature Processing)
+The system of claim 11, wherein the visual feature data is generated by an on-device Neural Processing Unit (NPU) executing an integer-quantized neural network classifying barrier hoarding materials.
+
+### Claim 13 (Dependent Claim - Directional Navigation Vector)
+The system of claim 11, wherein the instruction transmitted to the external client device comprises coordinates of the selected candidate pose and a target azimuth angle, causing the client device to render a directional guidance arrow on a graphical display.
+
+---
+
+### Claim 14 (Independent Physical Cyber-Physical System Claim)
+A cyber-physical monitoring system for a land development site, comprising:
+1. at least one stationary sensor node disposed along a perimeter of the site, comprising an electret microphone, an optical particulate transducer, and a microcontroller streaming continuous telemetry;
+2. a mobile client device comprising an optical camera and a location sensor; and
+3. an edge processing server communicatively coupled to the stationary sensor node and the mobile client device, configured to perform the method of Claim 1.
+
+---
+
+### Claim 15 (Independent Non-Transitory Medium Claim)
 A non-transitory computer-readable storage medium storing instructions that, when executed by one or more processors, cause the one or more processors to execute the method of claim 1.
