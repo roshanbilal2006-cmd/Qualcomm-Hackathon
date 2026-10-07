@@ -1,0 +1,18 @@
+{
+  "full_dit_doe": {
+    "mean_rmse": 457.08423771874925,
+    "std_rmse": 3.6504194831920844
+  },
+  "ablation_a_no_barrier": {
+    "mean_rmse": 470.2738906882822,
+    "std_rmse": 1.5163069958202364
+  },
+  "ablation_b_no_view_plan": {
+    "mean_rmse": 471.92044179231715,
+    "std_rmse": 3.0815529436060856
+  },
+  "ablation_c_no_recalibration": {
+    "mean_rmse": 458.32935906535283,
+    "std_rmse": 3.6422203039980166
+  }
+}
